@@ -1,0 +1,66 @@
+@import "tailwindcss";
+
+:root {
+  --background: #F5F0F2;
+  --background-outer: #DDD4D8;
+  --foreground: #2E0510;
+  --foreground-muted: #906070;
+
+  --card: rgba(255, 255, 255, 0.60);
+  --card-border: rgba(255, 255, 255, 0.92);
+  --surface: rgba(255, 255, 255, 0.42);
+
+  --border: rgba(128, 0, 32, 0.10);
+  --border-soft: rgba(128, 0, 32, 0.07);
+  --input: rgba(255, 255, 255, 0.70);
+
+  --primary: #800020;
+  --primary-foreground: #FAF0F2;
+  --primary-dark: #5C0018;
+  --primary-darker: #3A0010;
+
+  --muted: rgba(128, 0, 32, 0.08);
+  --muted-foreground: #906070;
+  --accent: #D0A0A8;
+  --destructive: #c0392b;
+  --ring: #800020;
+
+  --shadow-card: 0 4px 24px rgba(40, 5, 15, 0.07), 0 1px 3px rgba(40, 5, 15, 0.04), inset 0 1px 0 rgba(255, 255, 255, 0.88);
+  --shadow-primary: 0 2px 12px rgba(128, 0, 32, 0.38);
+  --shadow-app: 0 2px 40px rgba(40, 5, 15, 0.12), 0 1px 4px rgba(40, 5, 15, 0.07);
+
+  --gold: #C9A96E;
+  --gold-dark: #A07840;
+  --font-serif: 'DM Serif Display', Georgia, serif;
+}
+
+* {
+  border-color: var(--border);
+  box-sizing: border-box;
+}
+
+body {
+  background: linear-gradient(145deg, #DDD4D8 0%, #C8BCC3 50%, #D5CBD0 100%);
+  background-attachment: fixed;
+  min-height: 100vh;
+  color: var(--foreground);
+  font-family: var(--font-inter), system-ui, -apple-system, sans-serif;
+}
+
+h1, h2, h3 {
+  font-family: var(--font-serif);
+}
+
+::-webkit-scrollbar {
+  width: 5px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(128, 0, 32, 0.18);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(128, 0, 32, 0.32);
+}
