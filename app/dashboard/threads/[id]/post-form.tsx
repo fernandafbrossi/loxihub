@@ -130,7 +130,6 @@ export function PostForm({ threadId, personagemPrincipal, personagens }: PostFor
   const [dropdownOpen, setDropdownOpen] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
-  const mirrorRef = useRef<HTMLDivElement>(null)
   const router = useRouter()
 
   const FORMAT_MARKERS: Record<string, string> = { bold: '**', italic: '*', underline: '__', strikethrough: '~~' }
@@ -146,19 +145,6 @@ export function PostForm({ threadId, personagemPrincipal, personagens }: PostFor
     setConteudo(next)
     setTimeout(() => { el.focus(); el.setSelectionRange(start + marker.length, end + marker.length) }, 0)
   }
-
-  // Sincroniza o scroll do mirror com o da textarea quando o conteúdo excede maxHeight
-  useEffect(() => {
-    const ta = textareaRef.current
-    if (!ta) return
-    const sync = () => {
-      if (mirrorRef.current) {
-        mirrorRef.current.style.transform = `translateY(-${ta.scrollTop}px)`
-      }
-    }
-    ta.addEventListener('scroll', sync)
-    return () => ta.removeEventListener('scroll', sync)
-  }, [])
 
   const principais = personagens
     .filter(p => p.tipo !== 'npc')
@@ -217,7 +203,6 @@ export function PostForm({ threadId, personagemPrincipal, personagens }: PostFor
 
     setConteudo('')
     if (textareaRef.current) textareaRef.current.style.height = 'auto'
-    if (mirrorRef.current) mirrorRef.current.style.transform = ''
     setLoading(false)
     router.refresh()
   }
@@ -333,30 +318,7 @@ export function PostForm({ threadId, personagemPrincipal, personagens }: PostFor
           boxShadow: '0 2px 12px rgba(40,5,15,0.05)',
         }}
       >
-        {/* Overlay: mirror atrás + textarea por cima */}
-        <div className="relative flex-1" style={{ minHeight: '1.5rem' }}>
-          {/* Mirror - renderiza o markdown formatado */}
-          <div
-            ref={mirrorRef}
-            aria-hidden
-            style={{
-              ...SHARED_TEXT_STYLE,
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              right: 0,
-              color: '#2E0510',
-              pointerEvents: 'none',
-              userSelect: 'none',
-            }}
-          >
-            {conteudo === ''
-              ? <span style={{ color: 'rgba(144,96,112,0.55)' }}>{`Escreva como ${povNome}...`}</span>
-              : renderWithMarkers(conteudo)
-            }
-          </div>
-
-          {/* Textarea - texto invisível, cursor visível */}
+        <div className="flex-1" style={{ minHeight: '1.5rem' }}>
           <textarea
             ref={textareaRef}
             value={conteudo}
@@ -365,12 +327,12 @@ export function PostForm({ threadId, personagemPrincipal, personagens }: PostFor
               if (e.key === 'Enter' && e.ctrlKey) handleSubmit(e as unknown as React.FormEvent)
             }}
             rows={1}
+            placeholder={`Escreva como ${povNome}...`}
             aria-label={`Escreva como ${povNome}`}
-            className="relative w-full outline-none resize-none bg-transparent"
+            className="w-full outline-none resize-none bg-transparent placeholder:opacity-40"
             style={{
               ...SHARED_TEXT_STYLE,
-              color: 'transparent',
-              caretColor: '#2E0510',
+              color: '#2E0510',
               minHeight: '1.5rem',
               maxHeight: '16rem',
               overflowY: 'auto',
