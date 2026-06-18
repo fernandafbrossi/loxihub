@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import { Send, ChevronDown, Bold, Italic, Underline, Strikethrough } from 'lucide-react'
+import { MarkdownText } from '@/components/markdown-text'
 
 const LAST_PERSONAGEM_KEY = 'loxihub_last_personagem_id'
 
@@ -255,18 +256,32 @@ export function PostForm({ threadId, personagemPrincipal, personagens }: PostFor
           boxShadow: '0 2px 12px rgba(40,5,15,0.05)',
         }}
       >
-        <textarea
-          ref={textareaRef}
-          value={conteudo}
-          onChange={e => { setConteudo(e.target.value); autoResize(e.target) }}
-          onKeyDown={e => {
-            if (e.key === 'Enter' && e.ctrlKey) handleSubmit(e as unknown as React.FormEvent)
-          }}
-          rows={1}
-          placeholder={`Escreva como ${povNome}...`}
-          className="flex-1 text-sm outline-none resize-none bg-transparent leading-relaxed"
-          style={{ color: '#2E0510', minHeight: '1.75rem', maxHeight: '16rem', overflowY: 'auto' }}
-        />
+        <div className="flex-1 flex flex-col gap-2">
+          <textarea
+            ref={textareaRef}
+            value={conteudo}
+            onChange={e => { setConteudo(e.target.value); autoResize(e.target) }}
+            onKeyDown={e => {
+              if (e.key === 'Enter' && e.ctrlKey) handleSubmit(e as unknown as React.FormEvent)
+            }}
+            rows={1}
+            placeholder={`Escreva como ${povNome}...`}
+            className="w-full text-sm outline-none resize-none bg-transparent leading-relaxed"
+            style={{ color: '#2E0510', minHeight: '1.75rem', maxHeight: '16rem', overflowY: 'auto', fontFamily: 'inherit' }}
+          />
+          {conteudo.trim() && (
+            <div
+              className="border-t pt-2"
+              style={{ borderColor: 'rgba(128,0,32,0.08)' }}
+            >
+              <p className="text-[9px] uppercase tracking-widest mb-1" style={{ color: '#B09098' }}>prévia</p>
+              <MarkdownText
+                text={conteudo}
+                style={{ fontSize: 13, lineHeight: '1.6', color: '#2E0510', display: 'block' }}
+              />
+            </div>
+          )}
+        </div>
         <button
           type="submit"
           disabled={loading || !conteudo.trim()}
