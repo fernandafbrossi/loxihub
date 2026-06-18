@@ -21,12 +21,14 @@ interface PostFormProps {
 }
 
 function Avatar({ p, size = 5 }: { p: { nome: string; foto_url: string | null }; size?: number }) {
-  const cls = `w-${size} h-${size} rounded-full flex-shrink-0`
+  const px = size * 4
+  const style = { width: px, height: px, flexShrink: 0 as const }
   return p.foto_url ? (
-    <img src={p.foto_url} alt={p.nome} className={`${cls} object-cover`} />
+    <img src={p.foto_url} alt={p.nome} className="rounded-full object-cover" style={style} />
   ) : (
     <div
-      className={`${cls} flex items-center justify-center font-medium`}
+      className="rounded-full flex items-center justify-center font-medium"
+      style={style}
       style={{
         background: 'linear-gradient(135deg, #800020, #5C0018)',
         color: '#FAF0F2',

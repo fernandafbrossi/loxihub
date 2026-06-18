@@ -209,7 +209,7 @@ function Avatar({ nome, foto, isMe }: { nome: string; foto: string | null; isMe:
     <img
       src={foto}
       alt={nome}
-      className="w-14 h-14 rounded-full object-cover grayscale hover:grayscale-0 transition-all duration-300"
+      className="w-14 h-14 rounded-full object-cover"
       style={{ boxShadow: '0 2px 8px rgba(40,5,15,0.15)' }}
       onError={() => setImgError(true)}
     />
