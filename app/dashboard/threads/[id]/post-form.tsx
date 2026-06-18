@@ -28,8 +28,10 @@ function Avatar({ p, size = 5 }: { p: { nome: string; foto_url: string | null };
   ) : (
     <div
       className="rounded-full flex items-center justify-center font-medium"
-      style={style}
       style={{
+        width: px,
+        height: px,
+        flexShrink: 0,
         background: 'linear-gradient(135deg, #800020, #5C0018)',
         color: '#FAF0F2',
         fontSize: size <= 5 ? 9 : 11,
