@@ -4,7 +4,6 @@ import { useState, useRef, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import { Send, ChevronDown, Bold, Italic, Underline, Strikethrough } from 'lucide-react'
-import { MarkdownText } from '@/components/markdown-text'
 
 const LAST_PERSONAGEM_KEY = 'loxihub_last_personagem_id'
 
@@ -60,12 +59,76 @@ function GroupLabel({ label }: { label: string }) {
   )
 }
 
+// Renderiza o texto com os marcadores markdown visíveis e o conteúdo formatado
+function renderWithMarkers(text: string): React.ReactNode[] {
+  const nodes: React.ReactNode[] = []
+  let key = 0
+
+  const lines = text.split('\n')
+  for (let li = 0; li < lines.length; li++) {
+    const line = lines[li]
+    let j = 0
+    let plain = ''
+
+    const flush = () => {
+      if (plain) { nodes.push(<span key={key++}>{plain}</span>); plain = '' }
+    }
+
+    const defs: [RegExp, string, React.CSSProperties][] = [
+      [/^\*\*(.+?)\*\*/, '**', { fontWeight: 700 }],
+      [/^\*([^*\n]+?)\*(?!\*)/, '*', { fontStyle: 'italic' }],
+      [/^__(.+?)__/, '__', { textDecoration: 'underline' }],
+      [/^~~(.+?)~~/, '~~', { textDecoration: 'line-through' }],
+    ]
+
+    while (j < line.length) {
+      const rest = line.slice(j)
+      let matched = false
+
+      for (const [re, marker, style] of defs) {
+        const m = rest.match(re)
+        if (m) {
+          flush()
+          nodes.push(
+            <span key={key++} style={{ ...style, color: 'rgba(46,5,16,0.28)' }}>{marker}</span>,
+            <span key={key++} style={style}>{m[1]}</span>,
+            <span key={key++} style={{ ...style, color: 'rgba(46,5,16,0.28)' }}>{marker}</span>
+          )
+          j += m[0].length
+          matched = true
+          break
+        }
+      }
+
+      if (!matched) {
+        plain += line[j++]
+      }
+    }
+
+    flush()
+    if (li < lines.length - 1) nodes.push(<br key={`br-${li}`} />)
+  }
+
+  return nodes
+}
+
+// Estilos compartilhados entre textarea e mirror para garantir alinhamento pixel-perfect
+const SHARED_TEXT_STYLE: React.CSSProperties = {
+  fontFamily: 'inherit',
+  fontSize: 14,
+  lineHeight: '1.5',
+  whiteSpace: 'pre-wrap',
+  wordBreak: 'break-word',
+  overflowWrap: 'break-word',
+}
+
 export function PostForm({ threadId, personagemPrincipal, personagens }: PostFormProps) {
   const [conteudo, setConteudo] = useState('')
   const [loading, setLoading] = useState(false)
   const [dropdownOpen, setDropdownOpen] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const mirrorRef = useRef<HTMLDivElement>(null)
   const router = useRouter()
 
   const FORMAT_MARKERS: Record<string, string> = { bold: '**', italic: '*', underline: '__', strikethrough: '~~' }
@@ -81,6 +144,19 @@ export function PostForm({ threadId, personagemPrincipal, personagens }: PostFor
     setConteudo(next)
     setTimeout(() => { el.focus(); el.setSelectionRange(start + marker.length, end + marker.length) }, 0)
   }
+
+  // Sincroniza o scroll do mirror com o da textarea quando o conteúdo excede maxHeight
+  useEffect(() => {
+    const ta = textareaRef.current
+    if (!ta) return
+    const sync = () => {
+      if (mirrorRef.current) {
+        mirrorRef.current.style.transform = `translateY(-${ta.scrollTop}px)`
+      }
+    }
+    ta.addEventListener('scroll', sync)
+    return () => ta.removeEventListener('scroll', sync)
+  }, [])
 
   const principais = personagens
     .filter(p => p.tipo !== 'npc')
@@ -138,9 +214,8 @@ export function PostForm({ threadId, personagemPrincipal, personagens }: PostFor
     })
 
     setConteudo('')
-    if (textareaRef.current) {
-      textareaRef.current.style.height = 'auto'
-    }
+    if (textareaRef.current) textareaRef.current.style.height = 'auto'
+    if (mirrorRef.current) mirrorRef.current.style.transform = ''
     setLoading(false)
     router.refresh()
   }
@@ -256,7 +331,30 @@ export function PostForm({ threadId, personagemPrincipal, personagens }: PostFor
           boxShadow: '0 2px 12px rgba(40,5,15,0.05)',
         }}
       >
-        <div className="flex-1 flex flex-col gap-2">
+        {/* Overlay: mirror atrás + textarea por cima */}
+        <div className="relative flex-1" style={{ minHeight: '1.5rem' }}>
+          {/* Mirror - renderiza o markdown formatado */}
+          <div
+            ref={mirrorRef}
+            aria-hidden
+            style={{
+              ...SHARED_TEXT_STYLE,
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              color: '#2E0510',
+              pointerEvents: 'none',
+              userSelect: 'none',
+            }}
+          >
+            {conteudo === ''
+              ? <span style={{ color: 'rgba(144,96,112,0.55)' }}>{`Escreva como ${povNome}...`}</span>
+              : renderWithMarkers(conteudo)
+            }
+          </div>
+
+          {/* Textarea - texto invisível, cursor visível */}
           <textarea
             ref={textareaRef}
             value={conteudo}
@@ -265,23 +363,19 @@ export function PostForm({ threadId, personagemPrincipal, personagens }: PostFor
               if (e.key === 'Enter' && e.ctrlKey) handleSubmit(e as unknown as React.FormEvent)
             }}
             rows={1}
-            placeholder={`Escreva como ${povNome}...`}
-            className="w-full text-sm outline-none resize-none bg-transparent leading-relaxed"
-            style={{ color: '#2E0510', minHeight: '1.75rem', maxHeight: '16rem', overflowY: 'auto', fontFamily: 'inherit' }}
+            aria-label={`Escreva como ${povNome}`}
+            className="relative w-full outline-none resize-none bg-transparent"
+            style={{
+              ...SHARED_TEXT_STYLE,
+              color: 'transparent',
+              caretColor: '#2E0510',
+              minHeight: '1.5rem',
+              maxHeight: '16rem',
+              overflowY: 'auto',
+            }}
           />
-          {conteudo.trim() && (
-            <div
-              className="border-t pt-2"
-              style={{ borderColor: 'rgba(128,0,32,0.08)' }}
-            >
-              <p className="text-[9px] uppercase tracking-widest mb-1" style={{ color: '#B09098' }}>prévia</p>
-              <MarkdownText
-                text={conteudo}
-                style={{ fontSize: 13, lineHeight: '1.6', color: '#2E0510', display: 'block' }}
-              />
-            </div>
-          )}
         </div>
+
         <button
           type="submit"
           disabled={loading || !conteudo.trim()}
