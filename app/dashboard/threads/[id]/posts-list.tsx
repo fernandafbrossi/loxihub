@@ -244,17 +244,24 @@ export function PostsList({ items, userId, personagens, threadId }: PostsListPro
   // Scroll inicial
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'instant' })
+    prevLength.current = localItems.length
   }, [])
 
-  // Scroll quando chega post novo
+  // Sync com o servidor quando router.refresh() atualiza os props
+  useEffect(() => {
+    setLocalItems(items)
+    seenIds.current = new Set(items.map(i => i.data.id))
+  }, [items])
+
+  // Scroll quando chegam posts novos (realtime ou refresh)
   useEffect(() => {
     if (localItems.length > prevLength.current) {
       bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
-      prevLength.current = localItems.length
     }
+    prevLength.current = localItems.length
   }, [localItems.length])
 
-  // Realtime: novos posts desta thread
+  // Realtime: novos posts desta thread (para a outra usuária ver sem refresh)
   useEffect(() => {
     const supabase = createClient()
     const channel = supabase

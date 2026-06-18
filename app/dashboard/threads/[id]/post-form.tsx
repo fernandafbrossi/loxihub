@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { useRouter } from 'next/navigation'
 import { Send, ChevronDown, Bold, Italic, Underline, Strikethrough } from 'lucide-react'
 
 const LAST_PERSONAGEM_KEY = 'loxihub_last_personagem_id'
@@ -128,6 +129,7 @@ export function PostForm({ threadId, personagemPrincipal, personagens }: PostFor
   const dropdownRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const mirrorRef = useRef<HTMLDivElement>(null)
+  const router = useRouter()
 
   const FORMAT_MARKERS: Record<string, string> = { bold: '**', italic: '*', underline: '__', strikethrough: '~~' }
 
@@ -215,6 +217,7 @@ export function PostForm({ threadId, personagemPrincipal, personagens }: PostFor
     if (textareaRef.current) textareaRef.current.style.height = 'auto'
     if (mirrorRef.current) mirrorRef.current.style.transform = ''
     setLoading(false)
+    router.refresh()
   }
 
   function autoResize(el: HTMLTextAreaElement) {
