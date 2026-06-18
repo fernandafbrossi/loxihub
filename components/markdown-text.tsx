@@ -14,10 +14,14 @@ function parseSegments(text: string): Segment[] {
 
   while (remaining.length > 0) {
     const patterns: [RegExp, Segment['type']][] = [
-      [/^\*\*([^*]+?)\*\*/, 'bold'],
+      // Bold: conteúdo pode ter * simples (para itálico aninhado), mas não **
+      [/^\*\*((?:[^*]|\*(?!\*))+?)\*\*/, 'bold'],
+      // Itálico: conteúdo não pode ter * (evita captura acidental entre dois * não-intencionais)
       [/^\*([^*\n]+?)\*(?!\*)/, 'italic'],
-      [/^__([^_]+?)__/, 'underline'],
-      [/^~~([^~]+?)~~/, 'strike'],
+      // Underline: conteúdo pode ter _ simples, mas não __
+      [/^__((?:[^_]|_(?!_))+?)__/, 'underline'],
+      // Strike: conteúdo pode ter ~ simples, mas não ~~
+      [/^~~((?:[^~]|~(?!~))+?)~~/, 'strike'],
       [/^`([^`]+?)`/, 'code'],
     ]
 
@@ -49,13 +53,26 @@ function parseSegments(text: string): Segment[] {
 function renderSegment(seg: Segment, key: number): React.ReactNode {
   switch (seg.type) {
     case 'bold':
-      return <strong key={key} style={{ fontWeight: 600 }}>{seg.content}</strong>
+      // Processa o conteúdo do bold recursivamente (permite itálico, underline, etc. dentro)
+      return (
+        <strong key={key} style={{ fontWeight: 600 }}>
+          {parseSegments(seg.content).map((inner, i) => renderSegment(inner, i))}
+        </strong>
+      )
     case 'italic':
       return <em key={key}>{seg.content}</em>
     case 'underline':
-      return <u key={key}>{seg.content}</u>
+      return (
+        <u key={key}>
+          {parseSegments(seg.content).map((inner, i) => renderSegment(inner, i))}
+        </u>
+      )
     case 'strike':
-      return <del key={key}>{seg.content}</del>
+      return (
+        <del key={key}>
+          {parseSegments(seg.content).map((inner, i) => renderSegment(inner, i))}
+        </del>
+      )
     case 'code':
       return (
         <code
