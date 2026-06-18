@@ -50,10 +50,11 @@ export function NotificationBell({ placement = 'up' }: { placement?: Placement }
   useEffect(() => {
     const supabase = createClient()
     let channel: RealtimeChannel
+    let cancelled = false
 
     async function init() {
       const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return
+      if (!user || cancelled) return
       setUserId(user.id)
 
       const { data } = await supabase
@@ -63,27 +64,28 @@ export function NotificationBell({ placement = 'up' }: { placement?: Placement }
         .order('created_at', { ascending: false })
         .limit(20)
 
-      if (data) setNotificacoes(data)
+      if (data && !cancelled) setNotificacoes(data)
 
       channel = supabase
-        .channel(`notificacoes:${user.id}`)
+        .channel('notificacoes-bell')
         .on(
           'postgres_changes',
-          {
-            event: 'INSERT',
-            schema: 'public',
-            table: 'notificacoes',
-            filter: `user_id=eq.${user.id}`,
-          },
+          { event: 'INSERT', schema: 'public', table: 'notificacoes' },
           (payload) => {
-            setNotificacoes(prev => [payload.new as Notificacao, ...prev])
+            const nova = payload.new as Notificacao & { user_id: string }
+            if (nova.user_id === user.id) {
+              setNotificacoes(prev => [nova, ...prev])
+            }
           }
         )
         .subscribe()
     }
 
     init()
-    return () => { channel?.unsubscribe() }
+    return () => {
+      cancelled = true
+      channel?.unsubscribe()
+    }
   }, [])
 
   useEffect(() => {

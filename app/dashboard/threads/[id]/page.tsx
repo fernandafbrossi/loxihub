@@ -140,6 +140,7 @@ export default async function ThreadPage({ params }: { params: Promise<{ id: str
             items={timeline as any}
             userId={user?.id ?? ''}
             personagens={personagens ?? []}
+            threadId={id}
           />
         </div>
 

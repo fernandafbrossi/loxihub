@@ -47,6 +47,7 @@ interface PostsListProps {
   items: TimelineItem[]
   userId: string
   personagens: Personagem[]
+  threadId: string
 }
 
 function Lightbox({ url, onClose }: { url: string; onClose: () => void }) {
@@ -229,28 +230,62 @@ function Avatar({ nome, foto, isMe }: { nome: string; foto: string | null; isMe:
   )
 }
 
-export function PostsList({ items, userId, personagens }: PostsListProps) {
+export function PostsList({ items, userId, personagens, threadId }: PostsListProps) {
+  const [localItems, setLocalItems] = useState<TimelineItem[]>(items)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editConteudo, setEditConteudo] = useState('')
   const [saving, setSaving] = useState(false)
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null)
   const router = useRouter()
   const bottomRef = useRef<HTMLDivElement>(null)
+  const seenIds = useRef(new Set(items.map(i => i.data.id)))
+  const prevLength = useRef(items.length)
 
+  // Scroll inicial
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'instant' })
   }, [])
 
+  // Scroll quando chega post novo
+  useEffect(() => {
+    if (localItems.length > prevLength.current) {
+      bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
+      prevLength.current = localItems.length
+    }
+  }, [localItems.length])
+
+  // Realtime: novos posts desta thread
+  useEffect(() => {
+    const supabase = createClient()
+    const channel = supabase
+      .channel(`posts-thread-${threadId}`)
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'posts' },
+        (payload) => {
+          const p = payload.new as Post & { thread_id: string }
+          if (p.thread_id !== threadId) return
+          if (seenIds.current.has(p.id)) return
+          seenIds.current.add(p.id)
+          setLocalItems(prev => [...prev, { type: 'post', data: p }])
+        }
+      )
+      .subscribe()
+
+    return () => { channel.unsubscribe() }
+  }, [threadId])
+
   async function handleDeleteContexto(id: string) {
     const supabase = createClient()
     await supabase.from('contextos_cena').delete().eq('id', id)
-    router.refresh()
+    setLocalItems(prev => prev.filter(i => i.data.id !== id))
   }
 
   async function handleDeletePost(id: string) {
     const supabase = createClient()
     await supabase.from('posts').delete().eq('id', id)
-    router.refresh()
+    setLocalItems(prev => prev.filter(i => i.data.id !== id))
+    seenIds.current.delete(id)
   }
 
   function getFoto(povNome: string): string | null {
@@ -275,21 +310,25 @@ export function PostsList({ items, userId, personagens }: PostsListProps) {
     await supabase.from('posts').update({ conteudo: editConteudo.trim() }).eq('id', postId)
     setSaving(false)
     setEditingId(null)
-    router.refresh()
+    setLocalItems(prev => prev.map(i =>
+      i.type === 'post' && i.data.id === postId
+        ? { ...i, data: { ...i.data, conteudo: editConteudo.trim() } }
+        : i
+    ))
   }
 
   return (
     <>
       {lightboxUrl && <Lightbox url={lightboxUrl} onClose={() => setLightboxUrl(null)} />}
 
-      {items.length === 0 ? (
+      {localItems.length === 0 ? (
         <div className="flex flex-col items-center justify-center h-full opacity-60">
           <p className="text-sm" style={{ color: '#906070' }}>Nenhum post ainda.</p>
           <p className="text-xs mt-1" style={{ color: '#B09098' }}>Escreva o primeiro trecho da história abaixo.</p>
         </div>
       ) : (
         <div className="flex flex-col gap-6">
-          {items.map(item => {
+          {localItems.map(item => {
             if (item.type === 'contexto') {
               return (
                 <ContextoCard
