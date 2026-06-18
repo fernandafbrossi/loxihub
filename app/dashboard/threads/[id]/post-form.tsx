@@ -137,8 +137,16 @@ export function PostForm({ threadId, personagemPrincipal, personagens }: PostFor
     })
 
     setConteudo('')
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto'
+    }
     setLoading(false)
     router.refresh()
+  }
+
+  function autoResize(el: HTMLTextAreaElement) {
+    el.style.height = 'auto'
+    el.style.height = `${el.scrollHeight}px`
   }
 
   const povNome = selectedPersonagem?.nome ?? 'Narrador'
@@ -250,14 +258,14 @@ export function PostForm({ threadId, personagemPrincipal, personagens }: PostFor
         <textarea
           ref={textareaRef}
           value={conteudo}
-          onChange={e => setConteudo(e.target.value)}
+          onChange={e => { setConteudo(e.target.value); autoResize(e.target) }}
           onKeyDown={e => {
             if (e.key === 'Enter' && e.ctrlKey) handleSubmit(e as unknown as React.FormEvent)
           }}
-          rows={2}
+          rows={1}
           placeholder={`Escreva como ${povNome}...`}
           className="flex-1 text-sm outline-none resize-none bg-transparent leading-relaxed"
-          style={{ color: '#2E0510' }}
+          style={{ color: '#2E0510', minHeight: '1.75rem', maxHeight: '16rem', overflowY: 'auto' }}
         />
         <button
           type="submit"
