@@ -384,7 +384,7 @@ export function PostsList({ items, userId, personagens }: PostsListProps) {
                   ) : (
                     <MarkdownText
                       text={post.conteudo}
-                      style={{ fontFamily: "'Segoe UI', system-ui, sans-serif", fontSize: 13, lineHeight: '1.45', fontWeight: 400, color: '#2E0510', display: 'block', textAlign: 'justify' }}
+                      style={{ fontFamily: "'Segoe UI', system-ui, sans-serif", fontSize: 13.5, lineHeight: '1.45', fontWeight: 400, color: '#2E0510', display: 'block', textAlign: 'justify' }}
                     />
                   )}
                 </div>
