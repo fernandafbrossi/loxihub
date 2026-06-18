@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { ScrollText, MapPin, Users, Home, LogOut, Menu, X, ArrowLeft, Smartphone, CalendarDays, PanelLeftClose, PanelLeftOpen, GitBranch } from 'lucide-react'
+import { NotificationBell } from '@/components/notifications-bell'
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 
@@ -119,15 +120,18 @@ export function Sidebar({ userEmail }: SidebarProps) {
         })}
       </nav>
 
-      {/* Expand button */}
-      <button
-        onClick={() => setCollapsed(false)}
-        title="Expandir menu"
-        className="w-9 h-9 flex items-center justify-center rounded-lg hover:opacity-70 transition-opacity"
-        style={{ color: '#906070' }}
-      >
-        <PanelLeftOpen size={15} />
-      </button>
+      {/* Notifications + expand */}
+      <div className="flex flex-col items-center gap-2">
+        <NotificationBell placement="right" />
+        <button
+          onClick={() => setCollapsed(false)}
+          title="Expandir menu"
+          className="w-9 h-9 flex items-center justify-center rounded-lg hover:opacity-70 transition-opacity"
+          style={{ color: '#906070' }}
+        >
+          <PanelLeftOpen size={15} />
+        </button>
+      </div>
     </aside>
   )
 
@@ -220,10 +224,11 @@ export function Sidebar({ userEmail }: SidebarProps) {
           >
             {displayName[0].toUpperCase()}
           </div>
-          <div className="min-w-0">
+          <div className="min-w-0 flex-1">
             <p className="text-xs font-medium truncate" style={{ color: '#2E0510' }}>{displayName}</p>
             <p className="text-[10px]" style={{ color: '#906070' }}>online</p>
           </div>
+          <NotificationBell placement="up" />
         </div>
         <button
           onClick={handleLogout}
