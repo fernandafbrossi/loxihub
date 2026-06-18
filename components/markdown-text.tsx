@@ -14,11 +14,11 @@ function parseSegments(text: string): Segment[] {
 
   while (remaining.length > 0) {
     const patterns: [RegExp, Segment['type']][] = [
-      [/^\*\*(.+?)\*\*/, 'bold'],
-      [/^\*(.+?)\*/, 'italic'],
-      [/^__(.+?)__/, 'underline'],
-      [/^~~(.+?)~~/, 'strike'],
-      [/^`(.+?)`/, 'code'],
+      [/^\*\*([^*]+?)\*\*/, 'bold'],
+      [/^\*([^*\n]+?)\*(?!\*)/, 'italic'],
+      [/^__([^_]+?)__/, 'underline'],
+      [/^~~([^~]+?)~~/, 'strike'],
+      [/^`([^`]+?)`/, 'code'],
     ]
 
     let matched = false
