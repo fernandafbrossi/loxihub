@@ -29,9 +29,11 @@ function TipoIcon({ tipo }: { tipo: string }) {
   const cls = 'flex-shrink-0 mt-0.5'
   const size = 13
   switch (tipo) {
-    case 'novo_post':             return <ScrollText   size={size} className={cls} style={{ color: '#800020' }} />
-    case 'comentario_instagram':  return <MessageCircle size={size} className={cls} style={{ color: '#800020' }} />
-    case 'curtida_instagram':     return <Heart         size={size} className={cls} style={{ color: '#800020' }} />
+    case 'novo_post':             return <ScrollText    size={size} className={cls} style={{ color: '#800020' }} />
+    case 'comentario_instagram':
+    case 'comentario_social':     return <MessageCircle size={size} className={cls} style={{ color: '#800020' }} />
+    case 'curtida_instagram':
+    case 'curtida_social':        return <Heart         size={size} className={cls} style={{ color: '#800020' }} />
     case 'reply_tweet':           return <CornerUpLeft  size={size} className={cls} style={{ color: '#800020' }} />
     default:                      return <Bell          size={size} className={cls} style={{ color: '#800020' }} />
   }
