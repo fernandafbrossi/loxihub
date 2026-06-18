@@ -384,7 +384,7 @@ export function PostsList({ items, userId, personagens }: PostsListProps) {
                   ) : (
                     <MarkdownText
                       text={post.conteudo}
-                      style={{ fontSize: 14, lineHeight: '1.7', color: '#2E0510', display: 'block', textAlign: 'justify' }}
+                      style={{ fontSize: 14, lineHeight: '1.5', fontWeight: 500, color: '#2E0510', display: 'block', textAlign: 'justify' }}
                     />
                   )}
                 </div>
