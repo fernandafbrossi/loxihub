@@ -75,8 +75,10 @@ function renderWithMarkers(text: string): React.ReactNode[] {
     }
 
     const defs: [RegExp, string, React.CSSProperties][] = [
-      [/^\*\*(.+?)\*\*/, '**', { fontWeight: 700 }],
-      [/^\*([^*\n]+?)\*(?!\*)/, '*', { fontStyle: 'italic' }],
+      // bold e italic sem mudança de peso/estilo para manter cursor alinhado com a textarea
+      // underline e strikethrough são seguros pois não alteram largura dos caracteres
+      [/^\*\*(.+?)\*\*/, '**', {}],
+      [/^\*([^*\n]+?)\*(?!\*)/, '*', {}],
       [/^__(.+?)__/, '__', { textDecoration: 'underline' }],
       [/^~~(.+?)~~/, '~~', { textDecoration: 'line-through' }],
     ]
