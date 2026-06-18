@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
-import { Send, ChevronDown } from 'lucide-react'
+import { Send, ChevronDown, Bold, Italic, Underline, Strikethrough } from 'lucide-react'
 
 const LAST_PERSONAGEM_KEY = 'loxihub_last_personagem_id'
 
@@ -64,7 +64,22 @@ export function PostForm({ threadId, personagemPrincipal, personagens }: PostFor
   const [loading, setLoading] = useState(false)
   const [dropdownOpen, setDropdownOpen] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
   const router = useRouter()
+
+  const FORMAT_MARKERS: Record<string, string> = { bold: '**', italic: '*', underline: '__', strikethrough: '~~' }
+
+  function applyFormat(format: string) {
+    const el = textareaRef.current
+    if (!el) return
+    const start = el.selectionStart
+    const end = el.selectionEnd
+    const marker = FORMAT_MARKERS[format]
+    const selected = conteudo.slice(start, end)
+    const next = conteudo.slice(0, start) + marker + selected + marker + conteudo.slice(end)
+    setConteudo(next)
+    setTimeout(() => { el.focus(); el.setSelectionRange(start + marker.length, end + marker.length) }, 0)
+  }
 
   const principais = personagens
     .filter(p => p.tipo !== 'npc')
@@ -207,6 +222,22 @@ export function PostForm({ threadId, personagemPrincipal, personagens }: PostFor
         )}
       </div>
 
+      {/* Toolbar de formatação */}
+      <div className="flex gap-1 mb-2">
+        {([['bold', Bold, 'Negrito'], ['italic', Italic, 'Itálico'], ['underline', Underline, 'Sublinhado'], ['strikethrough', Strikethrough, 'Riscado']] as const).map(([fmt, Icon, label]) => (
+          <button
+            key={fmt}
+            type="button"
+            title={label}
+            onClick={() => applyFormat(fmt)}
+            className="p-1.5 rounded-md transition-opacity hover:opacity-70"
+            style={{ background: 'rgba(128,0,32,0.07)', color: '#800020' }}
+          >
+            <Icon size={12} />
+          </button>
+        ))}
+      </div>
+
       {/* Área de texto + botão */}
       <div
         className="flex gap-2 items-end rounded-xl px-4 py-3"
@@ -217,13 +248,14 @@ export function PostForm({ threadId, personagemPrincipal, personagens }: PostFor
         }}
       >
         <textarea
+          ref={textareaRef}
           value={conteudo}
           onChange={e => setConteudo(e.target.value)}
           onKeyDown={e => {
             if (e.key === 'Enter' && e.ctrlKey) handleSubmit(e as unknown as React.FormEvent)
           }}
           rows={2}
-          placeholder={`Escreva como ${povNome}... (**negrito**, *itálico*, __sublinhado__)`}
+          placeholder={`Escreva como ${povNome}...`}
           className="flex-1 text-sm outline-none resize-none bg-transparent leading-relaxed"
           style={{ color: '#2E0510' }}
         />
@@ -237,7 +269,7 @@ export function PostForm({ threadId, personagemPrincipal, personagens }: PostFor
         </button>
       </div>
       <p className="text-[10px] mt-1.5 ml-1" style={{ color: '#B09098' }}>
-        Ctrl+Enter para enviar · **negrito** · *itálico* · __sublinhado__ · ~~riscado~~
+        Ctrl+Enter para enviar
       </p>
     </form>
   )

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import { Pencil, Check, X, MapPin, Trash2, Thermometer } from 'lucide-react'
@@ -235,6 +235,11 @@ export function PostsList({ items, userId, personagens }: PostsListProps) {
   const [saving, setSaving] = useState(false)
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null)
   const router = useRouter()
+  const bottomRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: 'instant' })
+  }, [])
 
   async function handleDeleteContexto(id: string) {
     const supabase = createClient()
@@ -388,6 +393,7 @@ export function PostsList({ items, userId, personagens }: PostsListProps) {
           })}
         </div>
       )}
+      <div ref={bottomRef} />
     </>
   )
 }
