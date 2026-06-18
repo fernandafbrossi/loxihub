@@ -22,9 +22,18 @@ interface PostFormProps {
 
 function Avatar({ p, size = 5 }: { p: { nome: string; foto_url: string | null }; size?: number }) {
   const px = size * 4
-  const style = { width: px, height: px, flexShrink: 0 as const }
   return p.foto_url ? (
-    <img src={p.foto_url} alt={p.nome} className="rounded-full object-cover" style={style} />
+    <div
+      className="rounded-full flex-shrink-0"
+      style={{
+        width: px,
+        height: px,
+        backgroundImage: `url(${p.foto_url})`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        flexShrink: 0,
+      }}
+    />
   ) : (
     <div
       className="rounded-full flex items-center justify-center font-medium"
