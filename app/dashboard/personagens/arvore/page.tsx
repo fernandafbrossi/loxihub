@@ -130,7 +130,7 @@ export default function ArvoreGenealogicaPage() {
                   <div className="w-16 h-16 rounded-full overflow-hidden border-2 flex items-center justify-center transition-all group-hover:scale-105"
                     style={{ borderColor: '#800020', background: 'rgba(128,0,32,0.08)' }}>
                     {p.foto_url ? (
-                      <img src={p.foto_url} alt={p.nome} className="w-full h-full object-cover" />
+                      <img src={p.foto_url} alt={p.nome} className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-300" />
                     ) : (
                       <Users size={24} style={{ color: '#906070' }} />
                     )}
