@@ -165,7 +165,7 @@ export function SocialClient({
         <Settings size={13} />
       </Link>
 
-    <div style={{ width: '100%', maxWidth: 760, background: '#FFFFFF', borderRadius: 16, overflow: 'hidden', minHeight: '100%' }}>
+    <div style={{ width: '100%', maxWidth: 760, background: '#FFFFFF', borderRadius: 16, overflow: 'hidden', minHeight: '100%', padding: '0 32px' }}>
       {/* ── Header dinâmico ── */}
       {tab === 'instagram' ? (
         /* Instagram header */
