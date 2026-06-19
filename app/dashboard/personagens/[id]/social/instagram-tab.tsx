@@ -12,7 +12,7 @@ interface Personagem { id: string; nome: string; foto_url: string | null }
 interface Props {
   personagemId: string
   personagem: Personagem
-  contas: Conta[]
+  currentConta: Conta | null
   allPosts: Post[]
   userId: string
   actingAs: PersonagemBasic | null
@@ -49,15 +49,9 @@ function nowLocalStr() {
 }
 
 export function InstagramTab({
-  personagemId, personagem, contas: initialContas, allPosts, userId,
+  personagemId, personagem, currentConta, allPosts,
   actingAs, todosPersonagens, curtidas: initCurtidas, comentarios: initComentarios,
 }: Props) {
-  const [contas, setContas] = useState(initialContas)
-  const [selectedContaId, setSelectedContaId] = useState<string | null>(initialContas[0]?.id ?? null)
-  const [creatingConta, setCreatingConta] = useState(false)
-  const [novaNome, setNovaNome] = useState('')
-  const [criandoConta, setCriandoConta] = useState(false)
-
   const [showForm, setShowForm] = useState(false)
   const [midiaUrl, setMidiaUrl] = useState('')
   const [legenda, setLegenda] = useState('')
@@ -81,30 +75,11 @@ export function InstagramTab({
 
   const router = useRouter()
 
-  const currentConta = contas.find(c => c.id === selectedContaId) ?? contas[0] ?? null
-  const posts = allPosts.filter(p =>
-    p.conta_id === currentConta?.id ||
-    (!p.conta_id && contas.indexOf(currentConta!) === 0 && p.tipo === 'instagram')
-  )
+  const posts = allPosts.filter(p => p.conta_id === currentConta?.id || (!p.conta_id && p.tipo === 'instagram'))
 
   const handle = currentConta?.username
     ? `@${currentConta.username}`
     : `@${personagem.nome.toLowerCase().replace(/\s+/g, '_')}`
-
-  async function criarConta() {
-    if (!novaNome.trim()) return
-    setCriandoConta(true)
-    const supabase = createClient()
-    const { data } = await supabase
-      .from('contas_sociais')
-      .insert({ personagem_id: personagemId, tipo: 'instagram', nome: novaNome.trim() })
-      .select().single()
-    if (data) {
-      setContas(prev => [...prev, data as Conta])
-      setSelectedContaId(data.id)
-    }
-    setNovaNome(''); setCreatingConta(false); setCriandoConta(false)
-  }
 
   async function handlePost() {
     if (!midiaUrl || !currentConta) return
@@ -112,14 +87,10 @@ export function InstagramTab({
     const supabase = createClient()
     const { data: { user } } = await supabase.auth.getUser()
     await supabase.from('posts_sociais').insert({
-      personagem_id: personagemId,
-      conteudo: legenda.trim(),
-      midia_url: midiaUrl,
-      tipo: 'instagram',
-      conta_id: currentConta.id,
+      personagem_id: personagemId, conteudo: legenda.trim(), midia_url: midiaUrl,
+      tipo: 'instagram', conta_id: currentConta.id,
       data_post: new Date(dataPost).toISOString(),
-      curtidas: 0, comentarios: 0,
-      criado_por: user?.id,
+      curtidas: 0, comentarios: 0, criado_por: user?.id,
     })
     setMidiaUrl(''); setLegenda(''); setShowForm(false)
     setDataPost(nowLocalStr()); setLoading(false)
@@ -183,298 +154,217 @@ export function InstagramTab({
     setComentarios(prev => prev.filter(c => c.id !== comentarioId))
   }
 
+  if (!currentConta) {
+    return (
+      <div className="text-center py-10 opacity-50">
+        <p className="text-sm" style={{ color: '#906070' }}>Nenhuma conta Instagram ainda</p>
+        <p className="text-xs mt-1" style={{ color: '#B09098' }}>Clique em "+ nova conta" acima para começar</p>
+      </div>
+    )
+  }
+
   return (
     <div>
-      {/* Seletor de conta */}
-      <div className="flex items-center gap-2 mb-4 flex-wrap">
-        {contas.map(c => (
-          <button key={c.id}
-            onClick={() => setSelectedContaId(c.id)}
-            className="text-[11px] px-2.5 py-1 rounded-full font-medium transition-all"
-            style={{
-              background: c.id === selectedContaId ? '#800020' : 'rgba(128,0,32,0.07)',
-              color: c.id === selectedContaId ? '#FAF0F2' : '#906070',
-            }}>
-            {c.username ? `@${c.username}` : c.nome}
-          </button>
-        ))}
-
-        {creatingConta ? (
-          <div className="flex items-center gap-1.5">
-            <input
-              value={novaNome} onChange={e => setNovaNome(e.target.value)}
-              onKeyDown={e => { if (e.key === 'Enter') criarConta(); if (e.key === 'Escape') { setCreatingConta(false); setNovaNome('') } }}
-              placeholder="nome da conta" autoFocus
-              className="text-[11px] px-2.5 py-1 rounded-xl outline-none w-28"
-              style={{ background: 'rgba(255,255,255,0.80)', border: '0.5px solid rgba(128,0,32,0.15)', color: '#2E0510' }}
-            />
-            <button onClick={criarConta} disabled={criandoConta || !novaNome.trim()}
-              className="text-[11px] px-2.5 py-1 rounded-full font-medium disabled:opacity-40"
-              style={{ background: '#800020', color: '#FAF0F2' }}>
-              {criandoConta ? '...' : 'Criar'}
-            </button>
-            <button onClick={() => { setCreatingConta(false); setNovaNome('') }}
-              style={{ color: '#B09098' }}>
-              <X size={12} />
-            </button>
-          </div>
-        ) : (
-          <button onClick={() => setCreatingConta(true)}
-            className="flex items-center gap-1 text-[11px] transition-opacity hover:opacity-70"
-            style={{ color: '#B09098' }}>
-            <Plus size={12} /> nova conta
-          </button>
-        )}
-      </div>
-
       {saveError && (
         <p className="text-[11px] mb-3 px-2 py-1.5 rounded-lg" style={{ background: 'rgba(192,0,0,0.08)', color: '#c0392b' }}>
           {saveError}
         </p>
       )}
 
-      {!currentConta ? (
-        <div className="text-center py-10 opacity-50">
-          <p className="text-sm" style={{ color: '#906070' }}>Nenhuma conta Instagram ainda</p>
-          <p className="text-xs mt-1" style={{ color: '#B09098' }}>Clique em "+ nova conta" para começar</p>
-        </div>
-      ) : (
-        <>
-          {/* Stats do Instagram */}
-          <div className="flex gap-6 mb-4 pb-4" style={{ borderBottom: '0.5px solid rgba(128,0,32,0.08)' }}>
-            <div className="text-center">
-              <p className="text-sm font-semibold" style={{ color: '#2E0510' }}>{posts.length}</p>
-              <p className="text-[10px]" style={{ color: '#906070' }}>publicações</p>
-            </div>
-            <div className="text-center">
-              <p className="text-sm font-semibold" style={{ color: '#2E0510' }}>{currentConta.seguidores.toLocaleString('pt-BR')}</p>
-              <p className="text-[10px]" style={{ color: '#906070' }}>seguidores</p>
-            </div>
-            <div className="text-center">
-              <p className="text-sm font-semibold" style={{ color: '#2E0510' }}>{currentConta.seguindo.toLocaleString('pt-BR')}</p>
-              <p className="text-[10px]" style={{ color: '#906070' }}>seguindo</p>
-            </div>
+      {/* Botão novo post */}
+      <button onClick={() => setShowForm(true)}
+        className="flex items-center gap-2 w-full py-3 mb-5 rounded-2xl text-xs font-medium transition-opacity hover:opacity-70"
+        style={{ background: 'rgba(255,255,255,0.60)', border: '0.5px solid rgba(128,0,32,0.10)', color: '#906070' }}>
+        <span className="ml-4 w-8 h-8 rounded-full flex items-center justify-center" style={{ background: 'rgba(128,0,32,0.08)', color: '#800020' }}>
+          <Plus size={14} />
+        </span>
+        Nova publicação
+      </button>
+
+      {/* Form */}
+      {showForm && (
+        <div className="rounded-2xl p-5 mb-5" style={{ background: 'rgba(255,255,255,0.65)', border: '0.5px solid rgba(128,0,32,0.12)' }}>
+          <div className="flex items-center justify-between mb-4">
+            <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: '#906070' }}>Nova publicação</p>
+            <button onClick={() => { setShowForm(false); setMidiaUrl(''); setLegenda('') }} style={{ color: '#B09098' }}><X size={14} /></button>
           </div>
-          {currentConta.bio && <p className="text-sm leading-relaxed mb-4" style={{ color: '#2E0510' }}>{currentConta.bio}</p>}
+          <div className="mb-4">
+            <p className="text-[10px] font-medium uppercase tracking-wider mb-2" style={{ color: '#906070' }}>Foto *</p>
+            <ImageUpload onUpload={setMidiaUrl} currentUrl={midiaUrl} />
+          </div>
+          <div className="mb-4">
+            <p className="text-[10px] font-medium uppercase tracking-wider mb-2" style={{ color: '#906070' }}>Legenda</p>
+            <textarea value={legenda} onChange={e => setLegenda(e.target.value)} placeholder="Escreva uma legenda..." rows={3}
+              className="w-full text-sm outline-none resize-none rounded-xl px-3 py-2.5"
+              style={{ background: 'rgba(255,255,255,0.70)', border: '0.5px solid rgba(128,0,32,0.12)', color: '#2E0510' }} />
+          </div>
+          <div className="mb-5">
+            <p className="text-[10px] font-medium uppercase tracking-wider mb-2" style={{ color: '#906070' }}>Data da publicação</p>
+            <input type="datetime-local" value={dataPost} onChange={e => setDataPost(e.target.value)}
+              className="text-xs outline-none rounded-xl px-3 py-2"
+              style={{ background: 'rgba(255,255,255,0.70)', border: '0.5px solid rgba(128,0,32,0.12)', color: '#906070' }} />
+          </div>
+          <div className="flex gap-2">
+            <button onClick={() => { setShowForm(false); setMidiaUrl(''); setLegenda('') }}
+              className="flex-1 py-2 rounded-xl text-xs transition-opacity hover:opacity-70"
+              style={{ background: 'rgba(128,0,32,0.07)', color: '#906070' }}>Cancelar</button>
+            <button onClick={handlePost} disabled={loading || !midiaUrl}
+              className="flex-1 py-2 rounded-xl text-xs font-medium disabled:opacity-40 transition-opacity hover:opacity-80"
+              style={{ background: '#800020', color: '#FAF0F2' }}>{loading ? 'Publicando...' : 'Publicar'}</button>
+          </div>
+        </div>
+      )}
 
-          {/* Botão novo post */}
-          <button onClick={() => setShowForm(true)}
-            className="flex items-center gap-2 w-full py-3 mb-5 rounded-2xl text-xs font-medium transition-opacity hover:opacity-70"
-            style={{ background: 'rgba(255,255,255,0.60)', border: '0.5px solid rgba(128,0,32,0.10)', color: '#906070' }}>
-            <span className="ml-4 w-8 h-8 rounded-full flex items-center justify-center" style={{ background: 'rgba(128,0,32,0.08)', color: '#800020' }}>
-              <Plus size={14} />
-            </span>
-            Nova publicação
-          </button>
-
-          {/* Form */}
-          {showForm && (
-            <div className="rounded-2xl p-5 mb-5" style={{ background: 'rgba(255,255,255,0.65)', border: '0.5px solid rgba(128,0,32,0.12)' }}>
-              <div className="flex items-center justify-between mb-4">
-                <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: '#906070' }}>Nova publicação</p>
-                <button onClick={() => { setShowForm(false); setMidiaUrl(''); setLegenda('') }} style={{ color: '#B09098' }}><X size={14} /></button>
-              </div>
-              <div className="mb-4">
-                <p className="text-[10px] font-medium uppercase tracking-wider mb-2" style={{ color: '#906070' }}>Foto *</p>
-                <ImageUpload onUpload={setMidiaUrl} currentUrl={midiaUrl} />
-              </div>
-              <div className="mb-4">
-                <p className="text-[10px] font-medium uppercase tracking-wider mb-2" style={{ color: '#906070' }}>Legenda</p>
-                <textarea value={legenda} onChange={e => setLegenda(e.target.value)} placeholder="Escreva uma legenda..." rows={3}
-                  className="w-full text-sm outline-none resize-none rounded-xl px-3 py-2.5"
-                  style={{ background: 'rgba(255,255,255,0.70)', border: '0.5px solid rgba(128,0,32,0.12)', color: '#2E0510' }} />
-              </div>
-              <div className="mb-5">
-                <p className="text-[10px] font-medium uppercase tracking-wider mb-2" style={{ color: '#906070' }}>Data da publicação</p>
-                <input type="datetime-local" value={dataPost} onChange={e => setDataPost(e.target.value)}
-                  className="text-xs outline-none rounded-xl px-3 py-2"
-                  style={{ background: 'rgba(255,255,255,0.70)', border: '0.5px solid rgba(128,0,32,0.12)', color: '#906070' }} />
-              </div>
-              <div className="flex gap-2">
-                <button onClick={() => { setShowForm(false); setMidiaUrl(''); setLegenda('') }}
-                  className="flex-1 py-2 rounded-xl text-xs transition-opacity hover:opacity-70"
-                  style={{ background: 'rgba(128,0,32,0.07)', color: '#906070' }}>Cancelar</button>
-                <button onClick={handlePost} disabled={loading || !midiaUrl}
-                  className="flex-1 py-2 rounded-xl text-xs font-medium disabled:opacity-40 transition-opacity hover:opacity-80"
-                  style={{ background: '#800020', color: '#FAF0F2' }}>{loading ? 'Publicando...' : 'Publicar'}</button>
-              </div>
-            </div>
-          )}
-
-          {/* Grid */}
-          {posts.length === 0 ? (
-            <div className="text-center py-10 opacity-50"><p className="text-sm" style={{ color: '#906070' }}>Nenhuma publicação ainda</p></div>
-          ) : (
-            <div className="grid grid-cols-3 gap-0.5 rounded-xl overflow-hidden">
-              {posts.map(post => {
-                const eng = engagements[post.id] ?? { curtidas: 0, comentarios: 0 }
-                const postCurtidas = curtidas.filter(c => c.post_id === post.id)
-                const postComentarios = comentarios.filter(c => c.post_id === post.id)
-                const totalCurtidas = postCurtidas.length + eng.curtidas
-                const totalComentarios = postComentarios.length + eng.comentarios
-                return (
-                  <button key={post.id} onClick={() => { setSelected(post); setEditingCaption(false) }}
-                    className="relative aspect-square overflow-hidden group" style={{ background: 'rgba(128,0,32,0.06)' }}>
-                    {post.midia_url
-                      ? <img src={post.midia_url} alt="" className="w-full h-full object-cover transition-transform group-hover:scale-105" />
-                      : <div className="w-full h-full flex items-center justify-center text-3xl" style={{ color: '#C09098' }}>{personagem.nome[0]}</div>
-                    }
-                    <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3"
-                      style={{ background: 'rgba(46,5,16,0.40)' }}>
-                      <span className="flex items-center gap-1 text-xs font-semibold text-white"><Heart size={14} fill="white" /> {totalCurtidas}</span>
-                      <span className="flex items-center gap-1 text-xs font-semibold text-white"><MessageCircle size={14} fill="white" stroke="white" /> {totalComentarios}</span>
-                    </div>
-                  </button>
-                )
-              })}
-            </div>
-          )}
-
-          {/* Modal */}
-          {selected && (() => {
-            const eng = engagements[selected.id] ?? { curtidas: 0, comentarios: 0 }
-            const postCurtidas = curtidas.filter(c => c.post_id === selected.id)
-            const postComentarios = comentarios.filter(c => c.post_id === selected.id)
-            const jaCurtiu = actingAs ? postCurtidas.some(c => c.personagem_id === actingAs.id) : false
-            const dataLabel = new Date(selected.data_post || selected.created_at).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })
+      {/* Grid */}
+      {posts.length === 0 ? (
+        <div className="text-center py-10 opacity-50"><p className="text-sm" style={{ color: '#906070' }}>Nenhuma publicação ainda</p></div>
+      ) : (
+        <div className="grid grid-cols-3 gap-0.5 rounded-xl overflow-hidden">
+          {posts.map(post => {
+            const eng = engagements[post.id] ?? { curtidas: 0, comentarios: 0 }
+            const postCurtidas = curtidas.filter(c => c.post_id === post.id)
+            const postComentarios = comentarios.filter(c => c.post_id === post.id)
             const totalCurtidas = postCurtidas.length + eng.curtidas
             const totalComentarios = postComentarios.length + eng.comentarios
-
             return (
-              <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
-                style={{ background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(4px)' }}
-                onClick={() => { setSelected(null); setEditingCaption(false) }}>
-                <div className="w-full max-w-sm rounded-2xl overflow-hidden flex flex-col"
-                  style={{ background: 'rgba(245,240,242,0.98)', boxShadow: '0 20px 60px rgba(40,5,15,0.30)', maxHeight: '90vh' }}
-                  onClick={e => e.stopPropagation()}>
-
-                  {/* Header */}
-                  <div className="flex items-center gap-3 px-4 py-3 flex-shrink-0" style={{ borderBottom: '0.5px solid rgba(128,0,32,0.08)' }}>
-                    <AccountAvatar conta={currentConta} personagem={personagem} size={32} />
-                    <div className="flex-1">
-                      <p className="text-xs font-semibold leading-none" style={{ color: '#2E0510' }}>{personagem.nome}</p>
-                      <p className="text-[10px] mt-0.5" style={{ color: '#B09098' }}>{handle}</p>
-                    </div>
-                    <button onClick={() => { setEditingCaption(true); setEditCaption(selected.conteudo) }}
-                      className="p-1.5 rounded-lg hover:opacity-60 transition-opacity" style={{ color: '#906070' }}><Pencil size={13} /></button>
-                    <button onClick={() => handleDelete(selected.id)} disabled={deletingId === selected.id}
-                      className="p-1.5 rounded-lg hover:opacity-60 transition-opacity disabled:opacity-30" style={{ color: '#906070' }}><Trash2 size={13} /></button>
-                    <button onClick={() => { setSelected(null); setEditingCaption(false) }} style={{ color: '#B09098' }}><X size={16} /></button>
-                  </div>
-
-                  {/* Imagem */}
-                  {selected.midia_url && <img src={selected.midia_url} alt="" className="w-full object-cover flex-shrink-0" style={{ maxHeight: 280 }} />}
-
-                  {/* Ações */}
-                  <div className="px-4 pt-3 pb-2 flex-shrink-0">
-                    <div className="flex items-center gap-3 mb-2">
-                      <button onClick={() => toggleCurtida(selected.id)} disabled={!actingAs}
-                        className="transition-transform hover:scale-110 disabled:opacity-40" title={actingAs ? `Curtir como ${actingAs.nome}` : 'Selecione um personagem'}>
-                        <Heart size={20} fill={jaCurtiu ? '#800020' : 'none'} stroke={jaCurtiu ? '#800020' : '#906070'} />
-                      </button>
-                      <MessageCircle size={20} style={{ color: '#906070' }} />
-                    </div>
-
-                    {/* Contadores editáveis */}
-                    <div className="flex items-center gap-4 mb-2">
-                      <EditableNum value={eng.curtidas} icon={<Heart size={12} style={{ color: '#C09098' }} />} label="curtidas fictícias" onSave={v => updateEngagement(selected.id, 'curtidas', v)} />
-                      <EditableNum value={eng.comentarios} icon={<MessageCircle size={12} style={{ color: '#C09098' }} />} label="comentários fictícios" onSave={v => updateEngagement(selected.id, 'comentarios', v)} />
-                    </div>
-
-                    {/* Quem curtiu — estilo Instagram */}
-                    {postCurtidas.length > 0 && (() => {
-                      const primeiro = todosPersonagens.find(x => x.id === postCurtidas[0].personagem_id)
-                      const outrasReais = postCurtidas.length - 1
-                      const totalOutras = outrasReais + eng.curtidas
-                      return (
-                        <div className="flex items-center gap-2 mb-2">
-                          <CharAvatar p={primeiro ?? { id: '', nome: '?', foto_url: null }} size={18} />
-                          <p className="text-[11px]" style={{ color: '#2E0510' }}>
-                            Curtido por{' '}
-                            <span className="font-semibold">{primeiro?.nome ?? '?'}</span>
-                            {totalOutras > 0 && (
-                              <> e <span className="font-semibold">{totalOutras.toLocaleString('pt-BR')} {totalOutras === 1 ? 'outra pessoa' : 'outras pessoas'}</span></>
-                            )}
-                          </p>
-                        </div>
-                      )
-                    })()}
-
-                    {/* Legenda */}
-                    {editingCaption ? (
-                      <div className="mb-2">
-                        <textarea value={editCaption} onChange={e => setEditCaption(e.target.value)} rows={3} autoFocus
-                          className="w-full text-xs outline-none resize-none rounded-lg px-2 py-2"
-                          style={{ background: 'rgba(255,255,255,0.70)', border: '0.5px solid rgba(128,0,32,0.20)', color: '#2E0510' }} />
-                        <div className="flex gap-2 mt-1">
-                          <button onClick={() => saveCaption(selected.id)} className="flex items-center gap-1 text-[11px] px-2.5 py-1 rounded-lg" style={{ background: '#800020', color: '#FAF0F2' }}><Check size={11} /> Salvar</button>
-                          <button onClick={() => setEditingCaption(false)} className="text-[11px] px-2.5 py-1 rounded-lg" style={{ background: 'rgba(128,0,32,0.07)', color: '#906070' }}>Cancelar</button>
-                        </div>
-                      </div>
-                    ) : selected.conteudo ? (
-                      <p className="text-xs leading-relaxed mb-1" style={{ color: '#2E0510' }}>
-                        <span className="font-semibold">{personagem.nome} </span>{selected.conteudo}
-                      </p>
-                    ) : null}
-                    <p className="text-[10px]" style={{ color: '#B09098' }}>{dataLabel}</p>
-
-                    {saveError && (
-                      <p className="text-[10px] mt-1 px-2 py-1 rounded" style={{ background: 'rgba(192,0,0,0.08)', color: '#c0392b' }}>
-                        {saveError}
-                      </p>
-                    )}
-                  </div>
-
-                  {/* Comentários */}
-                  <div className="flex-1 overflow-y-auto px-4 py-2" style={{ borderTop: '0.5px solid rgba(128,0,32,0.08)' }}>
-                    {postComentarios.length === 0
-                      ? <p className="text-[10px] text-center py-2" style={{ color: '#B09098' }}>Sem comentários ainda</p>
-                      : postComentarios.map(c => {
-                        const autor = c.personagens as PersonagemBasic | null
-                        return (
-                          <div key={c.id} className="flex items-start gap-2 py-1.5 group">
-                            {autor && <CharAvatar p={autor} size={22} />}
-                            <div className="flex-1 min-w-0">
-                              <span className="text-[11px] font-semibold" style={{ color: '#2E0510' }}>{autor?.nome ?? '?'} </span>
-                              <span className="text-[11px]" style={{ color: '#2E0510' }}>{c.conteudo}</span>
-                            </div>
-                            <button onClick={() => deletarComentario(c.id)}
-                              className="opacity-0 group-hover:opacity-100 flex-shrink-0 transition-opacity p-0.5 hover:opacity-60"
-                              style={{ color: '#B09098' }}><Trash2 size={11} /></button>
-                          </div>
-                        )
-                      })
-                    }
-                  </div>
-
-                  {/* Campo de comentário */}
-                  {actingAs ? (
-                    <div className="flex items-center gap-2 px-4 py-3 flex-shrink-0" style={{ borderTop: '0.5px solid rgba(128,0,32,0.08)' }}>
-                      <CharAvatar p={actingAs} size={26} />
-                      <input
-                        value={novoComentario}
-                        onChange={e => setNovoComentario(e.target.value)}
-                        onKeyDown={e => { if (e.key === 'Enter') enviarComentario(selected.id) }}
-                        placeholder={`Comentar como ${actingAs.nome}...`}
-                        className="flex-1 text-xs outline-none bg-transparent"
-                        style={{ color: '#2E0510' }}
-                      />
-                      <button onClick={() => enviarComentario(selected.id)} disabled={enviandoComentario || !novoComentario.trim()}
-                        className="disabled:opacity-30 transition-opacity hover:opacity-70" style={{ color: '#800020' }}>
-                        <Send size={15} />
-                      </button>
-                    </div>
-                  ) : (
-                    <p className="text-[10px] text-center py-2 flex-shrink-0" style={{ color: '#B09098', borderTop: '0.5px solid rgba(128,0,32,0.08)' }}>
-                      Selecione um personagem acima para interagir
-                    </p>
-                  )}
+              <button key={post.id} onClick={() => { setSelected(post); setEditingCaption(false) }}
+                className="relative aspect-square overflow-hidden group" style={{ background: 'rgba(128,0,32,0.06)' }}>
+                {post.midia_url
+                  ? <img src={post.midia_url} alt="" className="w-full h-full object-cover transition-transform group-hover:scale-105" />
+                  : <div className="w-full h-full flex items-center justify-center text-3xl" style={{ color: '#C09098' }}>{personagem.nome[0]}</div>
+                }
+                <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3"
+                  style={{ background: 'rgba(46,5,16,0.40)' }}>
+                  <span className="flex items-center gap-1 text-xs font-semibold text-white"><Heart size={14} fill="white" /> {totalCurtidas}</span>
+                  <span className="flex items-center gap-1 text-xs font-semibold text-white"><MessageCircle size={14} fill="white" stroke="white" /> {totalComentarios}</span>
                 </div>
-              </div>
+              </button>
             )
-          })()}
-        </>
+          })}
+        </div>
       )}
+
+      {/* Modal */}
+      {selected && (() => {
+        const eng = engagements[selected.id] ?? { curtidas: 0, comentarios: 0 }
+        const postCurtidas = curtidas.filter(c => c.post_id === selected.id)
+        const postComentarios = comentarios.filter(c => c.post_id === selected.id)
+        const jaCurtiu = actingAs ? postCurtidas.some(c => c.personagem_id === actingAs.id) : false
+        const dataLabel = new Date(selected.data_post || selected.created_at).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })
+        const totalCurtidas = postCurtidas.length + eng.curtidas
+
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
+            style={{ background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(4px)' }}
+            onClick={() => { setSelected(null); setEditingCaption(false) }}>
+            <div className="w-full max-w-sm rounded-2xl overflow-hidden flex flex-col"
+              style={{ background: 'rgba(245,240,242,0.98)', boxShadow: '0 20px 60px rgba(40,5,15,0.30)', maxHeight: '90vh' }}
+              onClick={e => e.stopPropagation()}>
+
+              <div className="flex items-center gap-3 px-4 py-3 flex-shrink-0" style={{ borderBottom: '0.5px solid rgba(128,0,32,0.08)' }}>
+                <AccountAvatar conta={currentConta} personagem={personagem} size={32} />
+                <div className="flex-1">
+                  <p className="text-xs font-semibold leading-none" style={{ color: '#2E0510' }}>{personagem.nome}</p>
+                  <p className="text-[10px] mt-0.5" style={{ color: '#B09098' }}>{handle}</p>
+                </div>
+                <button onClick={() => { setEditingCaption(true); setEditCaption(selected.conteudo) }}
+                  className="p-1.5 rounded-lg hover:opacity-60 transition-opacity" style={{ color: '#906070' }}><Pencil size={13} /></button>
+                <button onClick={() => handleDelete(selected.id)} disabled={deletingId === selected.id}
+                  className="p-1.5 rounded-lg hover:opacity-60 transition-opacity disabled:opacity-30" style={{ color: '#906070' }}><Trash2 size={13} /></button>
+                <button onClick={() => { setSelected(null); setEditingCaption(false) }} style={{ color: '#B09098' }}><X size={16} /></button>
+              </div>
+
+              {selected.midia_url && <img src={selected.midia_url} alt="" className="w-full object-cover flex-shrink-0" style={{ maxHeight: 280 }} />}
+
+              <div className="px-4 pt-3 pb-2 flex-shrink-0">
+                <div className="flex items-center gap-3 mb-2">
+                  <button onClick={() => toggleCurtida(selected.id)} disabled={!actingAs}
+                    className="transition-transform hover:scale-110 disabled:opacity-40">
+                    <Heart size={20} fill={jaCurtiu ? '#800020' : 'none'} stroke={jaCurtiu ? '#800020' : '#906070'} />
+                  </button>
+                  <MessageCircle size={20} style={{ color: '#906070' }} />
+                </div>
+
+                <div className="flex items-center gap-4 mb-2">
+                  <EditableNum value={eng.curtidas} icon={<Heart size={12} style={{ color: '#C09098' }} />} label="curtidas fictícias" onSave={v => updateEngagement(selected.id, 'curtidas', v)} />
+                  <EditableNum value={eng.comentarios} icon={<MessageCircle size={12} style={{ color: '#C09098' }} />} label="comentários fictícios" onSave={v => updateEngagement(selected.id, 'comentarios', v)} />
+                </div>
+
+                {postCurtidas.length > 0 && (() => {
+                  const primeiro = todosPersonagens.find(x => x.id === postCurtidas[0].personagem_id)
+                  const totalOutras = (postCurtidas.length - 1) + eng.curtidas
+                  return (
+                    <div className="flex items-center gap-2 mb-2">
+                      <CharAvatar p={primeiro ?? { id: '', nome: '?', foto_url: null }} size={18} />
+                      <p className="text-[11px]" style={{ color: '#2E0510' }}>
+                        Curtido por <span className="font-semibold">{primeiro?.nome ?? '?'}</span>
+                        {totalOutras > 0 && <> e <span className="font-semibold">{totalOutras.toLocaleString('pt-BR')} {totalOutras === 1 ? 'outra pessoa' : 'outras pessoas'}</span></>}
+                      </p>
+                    </div>
+                  )
+                })()}
+
+                {editingCaption ? (
+                  <div className="mb-2">
+                    <textarea value={editCaption} onChange={e => setEditCaption(e.target.value)} rows={3} autoFocus
+                      className="w-full text-xs outline-none resize-none rounded-lg px-2 py-2"
+                      style={{ background: 'rgba(255,255,255,0.70)', border: '0.5px solid rgba(128,0,32,0.20)', color: '#2E0510' }} />
+                    <div className="flex gap-2 mt-1">
+                      <button onClick={() => saveCaption(selected.id)} className="flex items-center gap-1 text-[11px] px-2.5 py-1 rounded-lg" style={{ background: '#800020', color: '#FAF0F2' }}><Check size={11} /> Salvar</button>
+                      <button onClick={() => setEditingCaption(false)} className="text-[11px] px-2.5 py-1 rounded-lg" style={{ background: 'rgba(128,0,32,0.07)', color: '#906070' }}>Cancelar</button>
+                    </div>
+                  </div>
+                ) : selected.conteudo ? (
+                  <p className="text-xs leading-relaxed mb-1" style={{ color: '#2E0510' }}>
+                    <span className="font-semibold">{personagem.nome} </span>{selected.conteudo}
+                  </p>
+                ) : null}
+                <p className="text-[10px]" style={{ color: '#B09098' }}>{dataLabel}</p>
+                {saveError && <p className="text-[10px] mt-1 px-2 py-1 rounded" style={{ background: 'rgba(192,0,0,0.08)', color: '#c0392b' }}>{saveError}</p>}
+              </div>
+
+              <div className="flex-1 overflow-y-auto px-4 py-2" style={{ borderTop: '0.5px solid rgba(128,0,32,0.08)' }}>
+                {postComentarios.length === 0
+                  ? <p className="text-[10px] text-center py-2" style={{ color: '#B09098' }}>Sem comentários ainda</p>
+                  : postComentarios.map(c => {
+                    const autor = c.personagens as PersonagemBasic | null
+                    return (
+                      <div key={c.id} className="flex items-start gap-2 py-1.5 group">
+                        {autor && <CharAvatar p={autor} size={22} />}
+                        <div className="flex-1 min-w-0">
+                          <span className="text-[11px] font-semibold" style={{ color: '#2E0510' }}>{autor?.nome ?? '?'} </span>
+                          <span className="text-[11px]" style={{ color: '#2E0510' }}>{c.conteudo}</span>
+                        </div>
+                        <button onClick={() => deletarComentario(c.id)}
+                          className="opacity-0 group-hover:opacity-100 flex-shrink-0 transition-opacity p-0.5 hover:opacity-60"
+                          style={{ color: '#B09098' }}><Trash2 size={11} /></button>
+                      </div>
+                    )
+                  })
+                }
+              </div>
+
+              {actingAs ? (
+                <div className="flex items-center gap-2 px-4 py-3 flex-shrink-0" style={{ borderTop: '0.5px solid rgba(128,0,32,0.08)' }}>
+                  <CharAvatar p={actingAs} size={26} />
+                  <input value={novoComentario} onChange={e => setNovoComentario(e.target.value)}
+                    onKeyDown={e => { if (e.key === 'Enter') enviarComentario(selected.id) }}
+                    placeholder={`Comentar como ${actingAs.nome}...`}
+                    className="flex-1 text-xs outline-none bg-transparent" style={{ color: '#2E0510' }} />
+                  <button onClick={() => enviarComentario(selected.id)} disabled={enviandoComentario || !novoComentario.trim()}
+                    className="disabled:opacity-30 transition-opacity hover:opacity-70" style={{ color: '#800020' }}>
+                    <Send size={15} />
+                  </button>
+                </div>
+              ) : (
+                <p className="text-[10px] text-center py-2 flex-shrink-0" style={{ color: '#B09098', borderTop: '0.5px solid rgba(128,0,32,0.08)' }}>
+                  Selecione um personagem acima para interagir
+                </p>
+              )}
+            </div>
+          </div>
+        )
+      })()}
     </div>
   )
 }
