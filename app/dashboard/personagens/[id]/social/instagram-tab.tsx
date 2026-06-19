@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
-import { X, Plus, Trash2, Heart, MessageCircle, Pencil, Check, Send } from 'lucide-react'
+import { X, Trash2, Heart, MessageCircle, Pencil, Check, Send } from 'lucide-react'
 import { ImageUpload } from '@/components/image-upload'
 import { AccountAvatar, CharAvatar, type PersonagemBasic, type Curtida, type Comentario, type Conta, type Post } from './social-client'
 
@@ -19,6 +19,7 @@ interface Props {
   todosPersonagens: PersonagemBasic[]
   curtidas: Curtida[]
   comentarios: Comentario[]
+  onNewPostRef?: (fn: () => void) => void
 }
 
 function EditableNum({ value, icon, label, onSave }: { value: number; icon: React.ReactNode; label: string; onSave: (n: number) => void }) {
@@ -51,6 +52,7 @@ function nowLocalStr() {
 export function InstagramTab({
   personagemId, personagem, currentConta, allPosts,
   actingAs, todosPersonagens, curtidas: initCurtidas, comentarios: initComentarios,
+  onNewPostRef,
 }: Props) {
   const [showForm, setShowForm] = useState(false)
   const [midiaUrl, setMidiaUrl] = useState('')
@@ -74,6 +76,9 @@ export function InstagramTab({
   const [comentarios, setComentarios] = useState<Comentario[]>(initComentarios)
 
   const router = useRouter()
+
+  // expõe setShowForm para o pai via ref callback
+  if (onNewPostRef) onNewPostRef(() => setShowForm(true))
 
   const posts = allPosts.filter(p => p.conta_id === currentConta?.id || (!p.conta_id && p.tipo === 'instagram'))
 
@@ -170,16 +175,6 @@ export function InstagramTab({
           {saveError}
         </p>
       )}
-
-      {/* Botão novo post */}
-      <button onClick={() => setShowForm(true)}
-        className="flex items-center gap-2 w-full py-3 mb-5 rounded-2xl text-xs font-medium transition-opacity hover:opacity-70"
-        style={{ background: 'rgba(255,255,255,0.60)', border: '0.5px solid rgba(128,0,32,0.10)', color: '#906070' }}>
-        <span className="ml-4 w-8 h-8 rounded-full flex items-center justify-center" style={{ background: 'rgba(128,0,32,0.08)', color: '#800020' }}>
-          <Plus size={14} />
-        </span>
-        Nova publicação
-      </button>
 
       {/* Form */}
       {showForm && (

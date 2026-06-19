@@ -89,6 +89,7 @@ export function SocialClient({
   const [creatingConta, setCreatingConta] = useState(false)
   const [novaNome, setNovaNome] = useState('')
   const [criandoConta, setCriandoConta] = useState(false)
+  const instagramNewPostFnRef = useRef<(() => void) | null>(null)
 
   const currentTwitterConta = twitterContas.find(c => c.id === selectedTwitterId) ?? twitterContas[0] ?? null
   const currentInstagramConta = instagramContas.find(c => c.id === selectedInstagramId) ?? instagramContas[0] ?? null
@@ -292,6 +293,15 @@ export function SocialClient({
             {c.username ? `@${c.username}` : c.nome}
           </button>
         ))}
+        {tab === 'instagram' && !creatingConta && (
+          <button
+            onClick={() => instagramNewPostFnRef.current?.()}
+            className="w-6 h-6 rounded-full flex items-center justify-center transition-opacity hover:opacity-70 ml-1"
+            style={{ background: 'rgba(128,0,32,0.10)', color: '#800020' }}
+            title="Nova publicação">
+            <Plus size={12} />
+          </button>
+        )}
         {creatingConta ? (
           <div className="flex items-center gap-1.5">
             <input
@@ -360,7 +370,7 @@ export function SocialClient({
       <div className="px-4 pt-3 pb-8">
         {tab === 'twitter'
           ? <TwitterTab {...commonTabProps} currentConta={currentTwitterConta} allPosts={twitterPosts} />
-          : <InstagramTab {...commonTabProps} currentConta={currentInstagramConta} allPosts={instagramPosts} />
+          : <InstagramTab {...commonTabProps} currentConta={currentInstagramConta} allPosts={instagramPosts} onNewPostRef={fn => { instagramNewPostFnRef.current = fn }} />
         }
       </div>
     </div>
