@@ -26,14 +26,18 @@ export interface Comentario {
   personagens: PersonagemBasic | null
 }
 
-interface Personagem {
+export interface Conta {
   id: string
+  tipo: 'twitter' | 'instagram'
   nome: string
-  foto_url: string | null
   username: string | null
+  bio: string | null
+  foto_url: string | null
+  seguidores: number
+  seguindo: number
 }
 
-interface Post {
+export interface Post {
   id: string
   conteudo: string
   midia_url: string | null
@@ -44,28 +48,28 @@ interface Post {
   created_at: string
   tipo: string | null
   data_post: string | null
+  conta_id: string | null
+}
+
+interface Personagem {
+  id: string
+  nome: string
+  foto_url: string | null
 }
 
 interface Props {
   personagemId: string
   personagem: Personagem
-  twitterPosts: Post[]
-  instagramPosts: Post[]
+  contas: Conta[]
+  posts: Post[]
   userId: string
-  bioTwitter: string | null
-  bioInstagram: string | null
-  seguindoTwitter: number
-  seguidoresTwitter: number
-  seguindoInsta: number
-  seguidoresInsta: number
   todosPersonagens: PersonagemBasic[]
   curtidasIniciais: Curtida[]
   comentariosIniciais: Comentario[]
 }
 
 export function SocialClient({
-  personagemId, personagem, twitterPosts, instagramPosts, userId,
-  bioTwitter, bioInstagram, seguindoTwitter, seguidoresTwitter, seguindoInsta, seguidoresInsta,
+  personagemId, personagem, contas, posts, userId,
   todosPersonagens, curtidasIniciais, comentariosIniciais,
 }: Props) {
   const [tab, setTab] = useState<'twitter' | 'instagram'>('twitter')
@@ -81,6 +85,18 @@ export function SocialClient({
     return () => document.removeEventListener('mousedown', handler)
   }, [])
 
+  const twitterContas = contas.filter(c => c.tipo === 'twitter')
+  const instagramContas = contas.filter(c => c.tipo === 'instagram')
+  const twitterContaIds = new Set(twitterContas.map(c => c.id))
+  const instagramContaIds = new Set(instagramContas.map(c => c.id))
+
+  const twitterPosts = posts.filter(p =>
+    twitterContaIds.has(p.conta_id ?? '') || (!p.conta_id && (!p.tipo || p.tipo === 'twitter'))
+  )
+  const instagramPosts = posts.filter(p =>
+    instagramContaIds.has(p.conta_id ?? '') || (!p.conta_id && p.tipo === 'instagram')
+  )
+
   const commonProps = {
     personagemId,
     personagem,
@@ -94,7 +110,7 @@ export function SocialClient({
   return (
     <div>
       {/* Seletor "Agindo como" */}
-      <div className="mx-6 mb-2">
+      <div className="mx-6 mb-2 mt-3">
         <div className="relative inline-block" ref={pickerRef}>
           <button
             onClick={() => setPickerOpen(v => !v)}
@@ -144,7 +160,7 @@ export function SocialClient({
       </div>
 
       {/* Tab switcher */}
-      <div className="flex border-b mx-6" style={{ borderColor: 'rgba(128,0,32,0.10)' }}>
+      <div className="flex border-b mx-6 mt-2" style={{ borderColor: 'rgba(128,0,32,0.10)' }}>
         <button
           onClick={() => setTab('twitter')}
           className="flex items-center gap-2 px-4 py-3 text-xs font-medium transition-all relative"
@@ -174,8 +190,8 @@ export function SocialClient({
 
       <div className="px-6 pt-5 pb-8">
         {tab === 'twitter'
-          ? <TwitterTab {...commonProps} posts={twitterPosts} bio={bioTwitter} seguindo={seguindoTwitter} seguidores={seguidoresTwitter} />
-          : <InstagramTab {...commonProps} posts={instagramPosts} bio={bioInstagram} seguindo={seguindoInsta} seguidores={seguidoresInsta} />
+          ? <TwitterTab {...commonProps} contas={twitterContas} allPosts={twitterPosts} />
+          : <InstagramTab {...commonProps} contas={instagramContas} allPosts={instagramPosts} />
         }
       </div>
     </div>
@@ -195,6 +211,31 @@ export function CharAvatar({ p, size }: { p: PersonagemBasic; size: number }) {
       {p.foto_url
         ? <img src={p.foto_url} alt={p.nome} className="w-full h-full object-cover" />
         : p.nome[0].toUpperCase()
+      }
+    </div>
+  )
+}
+
+export function AccountAvatar({
+  conta, personagem, size,
+}: {
+  conta: Conta | null
+  personagem: { nome: string; foto_url: string | null }
+  size: number
+}) {
+  const fotoUrl = conta?.foto_url ?? personagem.foto_url
+  return (
+    <div
+      className="rounded-full overflow-hidden flex-shrink-0 flex items-center justify-center font-semibold"
+      style={{
+        width: size, height: size, minWidth: size, minHeight: size, fontSize: size * 0.38,
+        background: 'linear-gradient(135deg, #800020, #5C0018)',
+        color: '#FAF0F2',
+      }}
+    >
+      {fotoUrl
+        ? <img src={fotoUrl} alt="" className="w-full h-full object-cover" />
+        : personagem.nome[0].toUpperCase()
       }
     </div>
   )
