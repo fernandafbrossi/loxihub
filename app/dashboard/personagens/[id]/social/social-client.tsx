@@ -152,7 +152,8 @@ export function SocialClient({
   }
 
   return (
-    <div>
+    <div className="min-h-full flex justify-center" style={{ background: 'rgba(128,0,32,0.03)' }}>
+    <div style={{ width: '100%', maxWidth: 480, background: '#FFFFFF', minHeight: '100%' }}>
       {/* ── Header dinâmico ── */}
       {tab === 'instagram' ? (
         /* Instagram header */
@@ -372,6 +373,7 @@ export function SocialClient({
           : <InstagramTab {...commonTabProps} currentConta={currentInstagramConta} allPosts={instagramPosts} onNewPostRef={fn => { instagramNewPostFnRef.current = fn }} />
         }
       </div>
+    </div>
     </div>
   )
 }
