@@ -26,6 +26,13 @@ function InspoImage({ item, onRemove }: { item: InspoItem; onRemove: (id: string
           style={{ background: 'rgba(46,5,16,0.88)', backdropFilter: 'blur(6px)' }}
           onClick={() => setLightbox(false)}
         >
+          <button
+            className="absolute top-4 right-4 w-8 h-8 rounded-full flex items-center justify-center"
+            style={{ background: 'rgba(255,255,255,0.15)' }}
+            onClick={() => setLightbox(false)}
+          >
+            <X size={16} color="#FAF0F2" />
+          </button>
           <img
             src={item.url}
             alt=""
