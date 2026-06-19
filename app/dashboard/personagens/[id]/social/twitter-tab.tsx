@@ -190,13 +190,14 @@ export function TwitterTab({
               <input type="datetime-local" value={dataPost} onChange={e => setDataPost(e.target.value)}
                 className="text-xs outline-none rounded-lg px-2 py-1"
                 style={{ background: 'rgba(128,0,32,0.05)', border: '0.5px solid rgba(128,0,32,0.12)', color: '#906070' }} />
-            </div>
-            <div className="flex items-center justify-between mt-3 pt-3"
-              style={{ borderTop: '0.5px solid rgba(128,0,32,0.08)' }}>
               <button onClick={() => setShowImg(v => !v)} type="button"
                 className="p-1.5 rounded-lg transition-opacity hover:opacity-60" style={{ color: '#906070' }}>
                 {showImg ? <X size={15} /> : <ImageIcon size={15} />}
               </button>
+            </div>
+            <div className="flex items-center justify-between mt-3 pt-3"
+              style={{ borderTop: '0.5px solid rgba(128,0,32,0.08)' }}>
+              <div />
               <div className="flex items-center gap-3">
                 {conteudo.length > 0 && (
                   <svg viewBox="0 0 36 36" className="w-7 h-7 -rotate-90">
