@@ -134,7 +134,7 @@ export function SocialClient({
   }
 
   return (
-    <div className="min-h-full flex justify-center relative px-6 py-6" style={{ background: '#FAF0F2' }}>
+    <div className="min-h-full flex justify-center relative px-4 py-4" style={{ background: '#FAF0F2' }}>
       {/* ── Botões flutuantes nas extremidades ── */}
       <Link href={`/dashboard/personagens/${personagemId}`}
         className="absolute left-6 top-6 flex items-center gap-1.5 text-xs hover:opacity-70 transition-opacity z-10"
@@ -147,7 +147,7 @@ export function SocialClient({
         <Settings size={17} />
       </Link>
 
-    <div style={{ width: '100%', maxWidth: 760, background: '#FFFFFF', borderRadius: 16, overflow: 'hidden', minHeight: '100%' }}>
+    <div style={{ width: '100%', maxWidth: 1100, background: '#FFFFFF', borderRadius: 16, overflow: 'hidden', minHeight: '100%' }}>
       {/* ── Header dinâmico ── */}
       {tab === 'instagram' ? (
         /* Instagram header */
