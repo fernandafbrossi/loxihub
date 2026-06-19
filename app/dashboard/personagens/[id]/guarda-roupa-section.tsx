@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { createPortal } from 'react-dom'
 import { createClient } from '@/lib/supabase/client'
 import { Shirt, X, Link, Upload } from 'lucide-react'
 
@@ -15,9 +16,9 @@ interface GuardaRoupaSectionProps {
 }
 
 function Lightbox({ url, onClose }: { url: string; onClose: () => void }) {
-  return (
+  return createPortal(
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center"
+      className="fixed inset-0 z-[9999] flex items-center justify-center"
       style={{ background: 'rgba(46,5,16,0.88)', backdropFilter: 'blur(6px)' }}
       onClick={onClose}
     >
@@ -34,7 +35,8 @@ function Lightbox({ url, onClose }: { url: string; onClose: () => void }) {
         className="max-h-[88vh] max-w-[88vw] object-contain rounded-2xl shadow-2xl"
         onClick={e => e.stopPropagation()}
       />
-    </div>
+    </div>,
+    document.body
   )
 }
 
