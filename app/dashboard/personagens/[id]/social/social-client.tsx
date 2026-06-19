@@ -296,7 +296,7 @@ export function SocialClient({
         {tab === 'instagram' && !creatingConta && (
           <button
             onClick={() => instagramNewPostFnRef.current?.()}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-opacity hover:opacity-70 ml-1"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-opacity hover:opacity-70 ml-auto"
             style={{ background: 'rgba(128,0,32,0.10)', color: '#800020' }}>
             <Plus size={13} /> novo post
           </button>
