@@ -152,26 +152,28 @@ export function SocialClient({
   }
 
   return (
-    <div className="min-h-full flex justify-center">
+    <div className="min-h-full flex justify-center relative" style={{ background: '#FFFFFF' }}>
+      {/* ── Botões flutuantes nas extremidades ── */}
+      <Link href={`/dashboard/personagens/${personagemId}`}
+        className="absolute left-4 top-4 flex items-center gap-1.5 text-xs hover:opacity-70 transition-opacity z-10"
+        style={{ color: '#906070' }}>
+        <ArrowLeft size={12} /> Perfil
+      </Link>
+      <Link href={`/dashboard/personagens/${personagemId}/social/editar`}
+        className="absolute right-4 top-4 hover:opacity-70 transition-opacity z-10"
+        style={{ color: '#906070' }}>
+        <Settings size={13} />
+      </Link>
+
     <div style={{ width: '100%', maxWidth: 760 }}>
       {/* ── Header dinâmico ── */}
       {tab === 'instagram' ? (
         /* Instagram header */
-        <div className="px-4 pt-4 pb-3" style={{ borderBottom: '0.5px solid rgba(128,0,32,0.08)' }}>
-          <div className="flex items-center justify-between mb-4">
-            <Link href={`/dashboard/personagens/${personagemId}`}
-              className="flex items-center gap-1.5 text-xs hover:opacity-70 transition-opacity"
-              style={{ color: '#906070' }}>
-              <ArrowLeft size={12} /> Perfil
-            </Link>
+        <div className="px-4 pt-10 pb-3" style={{ borderBottom: '0.5px solid rgba(128,0,32,0.08)' }}>
+          <div className="flex items-center justify-center mb-4">
             <p className="text-sm font-semibold" style={{ color: '#2E0510' }}>
               {currentInstagramConta?.username ?? personagem.nome.toLowerCase().replace(/\s+/g, '_')}
             </p>
-            <Link href={`/dashboard/personagens/${personagemId}/social/editar`}
-              className="flex items-center gap-1 text-xs hover:opacity-70 transition-opacity"
-              style={{ color: '#906070' }}>
-              <Settings size={13} />
-            </Link>
           </div>
 
           <div className="flex items-center gap-5 mb-3">
@@ -208,20 +210,7 @@ export function SocialClient({
       ) : (
         /* Twitter header — simples, sem banner */
         <div className="px-4 pt-4 pb-3" style={{ borderBottom: '0.5px solid rgba(128,0,32,0.08)' }}>
-          <div className="flex items-center justify-between mb-4">
-            <Link href={`/dashboard/personagens/${personagemId}`}
-              className="flex items-center gap-1.5 text-xs hover:opacity-70 transition-opacity"
-              style={{ color: '#906070' }}>
-              <ArrowLeft size={12} /> Perfil
-            </Link>
-            <Link href={`/dashboard/personagens/${personagemId}/social/editar`}
-              className="flex items-center gap-1 text-xs hover:opacity-70 transition-opacity"
-              style={{ color: '#906070' }}>
-              <Settings size={13} />
-            </Link>
-          </div>
-
-          <div className="flex items-center gap-3 mb-2">
+          <div className="flex items-center gap-3 mb-2 mt-6">
             <div
               className="w-14 h-14 rounded-full overflow-hidden flex-shrink-0 flex items-center justify-center font-bold text-xl"
               style={{ background: 'linear-gradient(135deg, #800020, #5C0018)', color: '#FAF0F2' }}
