@@ -75,7 +75,7 @@ export function SocialClient({
   personagemId, personagem, contas: initialContas, posts, userId,
   todosPersonagens, curtidasIniciais, comentariosIniciais,
 }: Props) {
-  const [tab, setTab] = useState<'twitter' | 'instagram'>('twitter')
+  const [tab, setTab] = useState<'twitter' | 'instagram'>('instagram')
   const [actingAs, setActingAs] = useState<PersonagemBasic | null>(todosPersonagens[0] ?? null)
   const [pickerOpen, setPickerOpen] = useState(false)
   const pickerRef = useRef<HTMLDivElement>(null)
@@ -153,66 +153,7 @@ export function SocialClient({
   return (
     <div>
       {/* ── Header dinâmico ── */}
-      {tab === 'twitter' ? (
-        <div>
-          {/* Banner */}
-          <div className="relative h-28 overflow-hidden"
-            style={{ background: 'linear-gradient(135deg, #1a0308 0%, #3d0010 50%, #800020 100%)' }}>
-            {personagem.capa_url && (
-              <img src={personagem.capa_url} alt="" className="w-full h-full object-cover" />
-            )}
-            <div className="absolute inset-0" style={{ background: 'rgba(0,0,0,0.15)' }} />
-            {/* Nav buttons sobre o banner */}
-            <div className="absolute top-3 left-3 right-3 flex items-center justify-between">
-              <Link href={`/dashboard/personagens/${personagemId}`}
-                className="flex items-center gap-1.5 text-[11px] px-2.5 py-1.5 rounded-full font-medium backdrop-blur-sm transition-opacity hover:opacity-80"
-                style={{ background: 'rgba(0,0,0,0.40)', color: '#FAF0F2' }}>
-                <ArrowLeft size={11} /> Perfil
-              </Link>
-              <Link href={`/dashboard/personagens/${personagemId}/social/editar`}
-                className="flex items-center gap-1.5 text-[11px] px-2.5 py-1.5 rounded-full font-medium backdrop-blur-sm transition-opacity hover:opacity-80"
-                style={{ background: 'rgba(0,0,0,0.40)', color: '#FAF0F2' }}>
-                <Settings size={11} /> Gerenciar contas
-              </Link>
-            </div>
-          </div>
-
-          {/* Avatar + info */}
-          <div className="px-4 pb-4" style={{ borderBottom: '0.5px solid rgba(128,0,32,0.08)' }}>
-            <div className="flex items-end justify-between -mt-8 mb-3">
-              <div
-                className="w-[68px] h-[68px] rounded-full overflow-hidden flex-shrink-0 flex items-center justify-center font-bold text-xl"
-                style={{
-                  background: 'linear-gradient(135deg, #800020, #5C0018)',
-                  color: '#FAF0F2',
-                  border: '3px solid #FAF0F2',
-                  boxShadow: '0 2px 12px rgba(40,5,15,0.20)',
-                }}
-              >
-                {(currentTwitterConta?.foto_url ?? personagem.foto_url)
-                  ? <img src={currentTwitterConta?.foto_url ?? personagem.foto_url ?? ''} alt="" className="w-full h-full object-cover" />
-                  : personagem.nome[0].toUpperCase()
-                }
-              </div>
-            </div>
-            <h1 className="text-sm font-bold leading-tight" style={{ color: '#2E0510' }}>{personagem.nome}</h1>
-            <p className="text-xs mt-0.5" style={{ color: '#906070' }}>{handle}</p>
-            {currentTwitterConta?.bio && (
-              <p className="text-xs mt-2 leading-relaxed" style={{ color: '#2E0510' }}>{currentTwitterConta.bio}</p>
-            )}
-            {(currentTwitterConta?.seguindo ?? 0) > 0 || (currentTwitterConta?.seguidores ?? 0) > 0 ? (
-              <div className="flex gap-4 mt-3">
-                <span className="text-xs" style={{ color: '#906070' }}>
-                  <strong style={{ color: '#2E0510' }}>{(currentTwitterConta?.seguindo ?? 0).toLocaleString('pt-BR')}</strong> seguindo
-                </span>
-                <span className="text-xs" style={{ color: '#906070' }}>
-                  <strong style={{ color: '#2E0510' }}>{(currentTwitterConta?.seguidores ?? 0).toLocaleString('pt-BR')}</strong> seguidores
-                </span>
-              </div>
-            ) : null}
-          </div>
-        </div>
-      ) : (
+      {tab === 'instagram' ? (
         /* Instagram header */
         <div className="px-4 pt-4 pb-3" style={{ borderBottom: '0.5px solid rgba(128,0,32,0.08)' }}>
           <div className="flex items-center justify-between mb-4">
@@ -234,10 +175,7 @@ export function SocialClient({
           <div className="flex items-center gap-5 mb-3">
             <div
               className="w-[76px] h-[76px] rounded-full overflow-hidden flex-shrink-0 flex items-center justify-center font-bold text-2xl"
-              style={{
-                background: 'linear-gradient(135deg, #800020, #5C0018)',
-                color: '#FAF0F2',
-              }}
+              style={{ background: 'linear-gradient(135deg, #800020, #5C0018)', color: '#FAF0F2' }}
             >
               {(currentInstagramConta?.foto_url ?? personagem.foto_url)
                 ? <img src={currentInstagramConta?.foto_url ?? personagem.foto_url ?? ''} alt="" className="w-full h-full object-cover" />
@@ -265,21 +203,56 @@ export function SocialClient({
             <p className="text-xs mt-1 leading-relaxed" style={{ color: '#2E0510' }}>{currentInstagramConta.bio}</p>
           )}
         </div>
+      ) : (
+        /* Twitter header — simples, sem banner */
+        <div className="px-4 pt-4 pb-3" style={{ borderBottom: '0.5px solid rgba(128,0,32,0.08)' }}>
+          <div className="flex items-center justify-between mb-4">
+            <Link href={`/dashboard/personagens/${personagemId}`}
+              className="flex items-center gap-1.5 text-xs hover:opacity-70 transition-opacity"
+              style={{ color: '#906070' }}>
+              <ArrowLeft size={12} /> Perfil
+            </Link>
+            <Link href={`/dashboard/personagens/${personagemId}/social/editar`}
+              className="flex items-center gap-1 text-xs hover:opacity-70 transition-opacity"
+              style={{ color: '#906070' }}>
+              <Settings size={13} />
+            </Link>
+          </div>
+
+          <div className="flex items-center gap-3 mb-2">
+            <div
+              className="w-14 h-14 rounded-full overflow-hidden flex-shrink-0 flex items-center justify-center font-bold text-xl"
+              style={{ background: 'linear-gradient(135deg, #800020, #5C0018)', color: '#FAF0F2' }}
+            >
+              {(currentTwitterConta?.foto_url ?? personagem.foto_url)
+                ? <img src={currentTwitterConta?.foto_url ?? personagem.foto_url ?? ''} alt="" className="w-full h-full object-cover" />
+                : personagem.nome[0].toUpperCase()
+              }
+            </div>
+            <div>
+              <h1 className="text-sm font-bold leading-tight" style={{ color: '#2E0510' }}>{personagem.nome}</h1>
+              <p className="text-xs mt-0.5" style={{ color: '#906070' }}>{handle}</p>
+            </div>
+          </div>
+
+          {currentTwitterConta?.bio && (
+            <p className="text-xs mt-1 leading-relaxed" style={{ color: '#2E0510' }}>{currentTwitterConta.bio}</p>
+          )}
+          {((currentTwitterConta?.seguindo ?? 0) > 0 || (currentTwitterConta?.seguidores ?? 0) > 0) && (
+            <div className="flex gap-4 mt-2">
+              <span className="text-xs" style={{ color: '#906070' }}>
+                <strong style={{ color: '#2E0510' }}>{(currentTwitterConta?.seguindo ?? 0).toLocaleString('pt-BR')}</strong> seguindo
+              </span>
+              <span className="text-xs" style={{ color: '#906070' }}>
+                <strong style={{ color: '#2E0510' }}>{(currentTwitterConta?.seguidores ?? 0).toLocaleString('pt-BR')}</strong> seguidores
+              </span>
+            </div>
+          )}
+        </div>
       )}
 
       {/* ── Tab switcher ── */}
       <div className="flex border-b mx-0" style={{ borderColor: 'rgba(128,0,32,0.10)' }}>
-        <button
-          onClick={() => setTab('twitter')}
-          className="flex items-center gap-2 px-6 py-3 text-xs font-medium transition-all relative"
-          style={{ color: tab === 'twitter' ? '#800020' : '#B09098' }}
-        >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.744l7.736-8.856L2 2.25h6.845l4.259 5.63L18.244 2.25zm-1.161 17.52h1.833L7.084 4.126H5.117L17.083 19.77z" />
-          </svg>
-          Twitter
-          {tab === 'twitter' && <span className="absolute bottom-0 left-0 right-0 h-0.5 rounded-full" style={{ background: '#800020' }} />}
-        </button>
         <button
           onClick={() => setTab('instagram')}
           className="flex items-center gap-2 px-6 py-3 text-xs font-medium transition-all relative"
@@ -292,6 +265,17 @@ export function SocialClient({
           </svg>
           Instagram
           {tab === 'instagram' && <span className="absolute bottom-0 left-0 right-0 h-0.5 rounded-full" style={{ background: '#800020' }} />}
+        </button>
+        <button
+          onClick={() => setTab('twitter')}
+          className="flex items-center gap-2 px-6 py-3 text-xs font-medium transition-all relative"
+          style={{ color: tab === 'twitter' ? '#800020' : '#B09098' }}
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.744l7.736-8.856L2 2.25h6.845l4.259 5.63L18.244 2.25zm-1.161 17.52h1.833L7.084 4.126H5.117L17.083 19.77z" />
+          </svg>
+          Twitter
+          {tab === 'twitter' && <span className="absolute bottom-0 left-0 right-0 h-0.5 rounded-full" style={{ background: '#800020' }} />}
         </button>
       </div>
 
