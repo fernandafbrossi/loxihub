@@ -86,9 +86,6 @@ export function SocialClient({
 
   const [selectedTwitterId, setSelectedTwitterId] = useState<string | null>(twitterContas[0]?.id ?? null)
   const [selectedInstagramId, setSelectedInstagramId] = useState<string | null>(instagramContas[0]?.id ?? null)
-  const [creatingConta, setCreatingConta] = useState(false)
-  const [novaNome, setNovaNome] = useState('')
-  const [criandoConta, setCriandoConta] = useState(false)
   const instagramNewPostFnRef = useRef<(() => void) | null>(null)
 
   const currentTwitterConta = twitterContas.find(c => c.id === selectedTwitterId) ?? twitterContas[0] ?? null
@@ -117,21 +114,6 @@ export function SocialClient({
     return () => document.removeEventListener('mousedown', handler)
   }, [])
 
-  async function criarConta() {
-    if (!novaNome.trim()) return
-    setCriandoConta(true)
-    const supabase = createClient()
-    const { data } = await supabase.from('contas_sociais')
-      .insert({ personagem_id: personagemId, tipo: tab, nome: novaNome.trim() })
-      .select().single()
-    if (data) {
-      const nova = data as Conta
-      setContas(prev => [...prev, nova])
-      if (tab === 'twitter') setSelectedTwitterId(nova.id)
-      else setSelectedInstagramId(nova.id)
-    }
-    setNovaNome(''); setCreatingConta(false); setCriandoConta(false)
-  }
 
   const handle = currentConta?.username
     ? `@${currentConta.username}`
@@ -162,7 +144,7 @@ export function SocialClient({
       <Link href={`/dashboard/personagens/${personagemId}/social/editar`}
         className="absolute right-6 top-6 hover:opacity-70 transition-opacity z-10"
         style={{ color: '#906070' }}>
-        <Settings size={13} />
+        <Settings size={17} />
       </Link>
 
     <div style={{ width: '100%', maxWidth: 760, background: '#FFFFFF', borderRadius: 16, overflow: 'hidden', minHeight: '100%', padding: '0 32px' }}>
@@ -283,37 +265,12 @@ export function SocialClient({
             {c.username ? `@${c.username}` : c.nome}
           </button>
         ))}
-        {tab === 'instagram' && !creatingConta && (
+        {tab === 'instagram' && (
           <button
             onClick={() => instagramNewPostFnRef.current?.()}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-opacity hover:opacity-70 ml-auto"
             style={{ background: 'rgba(128,0,32,0.10)', color: '#800020' }}>
             <Plus size={13} /> novo post
-          </button>
-        )}
-        {creatingConta ? (
-          <div className="flex items-center gap-1.5">
-            <input
-              value={novaNome} onChange={e => setNovaNome(e.target.value)}
-              onKeyDown={e => { if (e.key === 'Enter') criarConta(); if (e.key === 'Escape') { setCreatingConta(false); setNovaNome('') } }}
-              placeholder="nome da conta" autoFocus
-              className="text-[11px] px-2.5 py-1 rounded-xl outline-none w-28"
-              style={{ background: 'rgba(255,255,255,0.90)', border: '0.5px solid rgba(128,0,32,0.20)', color: '#2E0510' }}
-            />
-            <button onClick={criarConta} disabled={criandoConta || !novaNome.trim()}
-              className="text-[11px] px-2.5 py-1 rounded-full font-medium disabled:opacity-40"
-              style={{ background: '#800020', color: '#FAF0F2' }}>
-              {criandoConta ? '...' : 'Criar'}
-            </button>
-            <button onClick={() => { setCreatingConta(false); setNovaNome('') }} style={{ color: '#B09098' }}>
-              <X size={12} />
-            </button>
-          </div>
-        ) : (
-          <button onClick={() => setCreatingConta(true)}
-            className="flex items-center gap-1 text-[11px] transition-opacity hover:opacity-70"
-            style={{ color: '#B09098' }}>
-            <Plus size={12} /> nova conta
           </button>
         )}
       </div>
