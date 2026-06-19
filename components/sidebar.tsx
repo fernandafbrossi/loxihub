@@ -29,7 +29,11 @@ export function Sidebar({ userEmail }: SidebarProps) {
     // 1. Tenta query param (?universo=)
     const params = new URLSearchParams(window.location.search)
     const fromQuery = params.get('universo')
-    if (fromQuery) { setUniversoFromContext(fromQuery); return }
+    if (fromQuery) {
+      sessionStorage.setItem('sidebarUniversoId', fromQuery)
+      setUniversoFromContext(fromQuery)
+      return
+    }
 
     // 2. Tenta buscar universo_id do recurso atual (personagem, lugar, thread)
     const resourceMatch = pathname.match(
@@ -40,8 +44,19 @@ export function Sidebar({ userEmail }: SidebarProps) {
       const id = resourceMatch[2]
       const supabase = createClient()
       supabase.from(table).select('universo_id').eq('id', id).single()
-        .then(({ data }) => setUniversoFromContext(data?.universo_id ?? null))
+        .then(({ data }) => {
+          const uid = data?.universo_id ?? null
+          if (uid) sessionStorage.setItem('sidebarUniversoId', uid)
+          setUniversoFromContext(uid)
+        })
       return
+    }
+
+    // 3. Fallback para páginas de conteúdo que não carregam ?universo= na URL
+    const isContentPage = /^\/dashboard\/(personagens|lugares|threads|arvore|redes-sociais|linha-do-tempo|instagram|twitter)/.test(pathname)
+    if (isContentPage) {
+      const saved = sessionStorage.getItem('sidebarUniversoId')
+      if (saved) { setUniversoFromContext(saved); return }
     }
 
     setUniversoFromContext(null)
