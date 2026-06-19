@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { createPortal } from 'react-dom'
 import { createClient } from '@/lib/supabase/client'
 import { Plus, X, Images } from 'lucide-react'
 
@@ -14,61 +15,66 @@ interface InspoSectionProps {
   inspoInicial: InspoItem[]
 }
 
-function InspoImage({ item, onRemove }: { item: InspoItem; onRemove: (id: string) => void }) {
+function Lightbox({ url, onClose }: { url: string; onClose: () => void }) {
+  return createPortal(
+    <div
+      className="fixed inset-0 z-[9999] flex items-center justify-center"
+      style={{ background: 'rgba(46,5,16,0.88)', backdropFilter: 'blur(6px)' }}
+      onClick={onClose}
+    >
+      <button
+        className="absolute top-4 right-4 w-8 h-8 rounded-full flex items-center justify-center"
+        style={{ background: 'rgba(255,255,255,0.15)' }}
+        onClick={onClose}
+      >
+        <X size={16} color="#FAF0F2" />
+      </button>
+      <img
+        src={url}
+        alt=""
+        className="max-h-[88vh] max-w-[88vw] object-contain rounded-2xl shadow-2xl"
+        onClick={e => e.stopPropagation()}
+      />
+    </div>,
+    document.body
+  )
+}
+
+function InspoImage({ item, onRemove, onOpen }: {
+  item: InspoItem
+  onRemove: (id: string) => void
+  onOpen: (url: string) => void
+}) {
   const [broken, setBroken] = useState(false)
-  const [lightbox, setLightbox] = useState(false)
 
   return (
-    <>
-      {lightbox && (
+    <div className="relative group flex-shrink-0">
+      {broken ? (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center"
-          style={{ background: 'rgba(46,5,16,0.88)', backdropFilter: 'blur(6px)' }}
-          onClick={() => setLightbox(false)}
+          className="w-24 h-32 rounded-xl flex items-center justify-center"
+          style={{ background: 'rgba(128,0,32,0.06)', border: '0.5px dashed rgba(128,0,32,0.20)' }}
         >
-          <button
-            className="absolute top-4 right-4 w-8 h-8 rounded-full flex items-center justify-center"
-            style={{ background: 'rgba(255,255,255,0.15)' }}
-            onClick={() => setLightbox(false)}
-          >
-            <X size={16} color="#FAF0F2" />
-          </button>
-          <img
-            src={item.url}
-            alt=""
-            className="max-h-[88vh] max-w-[88vw] object-contain rounded-2xl shadow-2xl"
-            onClick={e => e.stopPropagation()}
-          />
+          <span className="text-[9px] text-center px-1" style={{ color: '#B09098' }}>link inválido</span>
         </div>
+      ) : (
+        <img
+          src={item.url}
+          alt=""
+          className="w-24 h-32 object-cover rounded-xl cursor-pointer hover:opacity-90 transition-opacity"
+          style={{ border: '0.5px solid rgba(128,0,32,0.12)' }}
+          onError={() => setBroken(true)}
+          onClick={() => onOpen(item.url)}
+        />
       )}
-      <div className="relative group flex-shrink-0">
-        {broken ? (
-          <div
-            className="w-24 h-32 rounded-xl flex items-center justify-center"
-            style={{ background: 'rgba(128,0,32,0.06)', border: '0.5px dashed rgba(128,0,32,0.20)' }}
-          >
-            <span className="text-[9px] text-center px-1" style={{ color: '#B09098' }}>link inválido</span>
-          </div>
-        ) : (
-          <img
-            src={item.url}
-            alt=""
-            className="w-24 h-32 object-cover rounded-xl cursor-pointer hover:opacity-90 transition-opacity"
-            style={{ border: '0.5px solid rgba(128,0,32,0.12)' }}
-            onError={() => setBroken(true)}
-            onClick={() => setLightbox(true)}
-          />
-        )}
-        <button
-          onClick={() => onRemove(item.id)}
-          className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-          style={{ background: '#800020', color: '#FAF0F2', boxShadow: '0 1px 4px rgba(40,5,15,0.30)' }}
-          title="Remover"
-        >
-          <X size={10} />
-        </button>
-      </div>
-    </>
+      <button
+        onClick={() => onRemove(item.id)}
+        className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+        style={{ background: '#800020', color: '#FAF0F2', boxShadow: '0 1px 4px rgba(40,5,15,0.30)' }}
+        title="Remover"
+      >
+        <X size={10} />
+      </button>
+    </div>
   )
 }
 
@@ -77,6 +83,7 @@ export function InspoSection({ personagemId, inspoInicial }: InspoSectionProps) 
   const [adding, setAdding] = useState(false)
   const [novaUrl, setNovaUrl] = useState('')
   const [saving, setSaving] = useState(false)
+  const [lightboxUrl, setLightboxUrl] = useState<string | null>(null)
 
   async function adicionar() {
     const url = novaUrl.trim()
@@ -102,6 +109,8 @@ export function InspoSection({ personagemId, inspoInicial }: InspoSectionProps) 
 
   return (
     <div>
+      {lightboxUrl && <Lightbox url={lightboxUrl} onClose={() => setLightboxUrl(null)} />}
+
       <div className="flex items-center justify-between mb-3">
         <p className="text-[10px] uppercase tracking-widest" style={{ color: '#B09098' }}>
           Inspo
@@ -153,7 +162,7 @@ export function InspoSection({ personagemId, inspoInicial }: InspoSectionProps) 
       ) : (
         <div className="flex gap-2 overflow-x-auto pb-1">
           {inspos.map(item => (
-            <InspoImage key={item.id} item={item} onRemove={remover} />
+            <InspoImage key={item.id} item={item} onRemove={remover} onOpen={setLightboxUrl} />
           ))}
         </div>
       )}
