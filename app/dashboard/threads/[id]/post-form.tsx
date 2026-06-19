@@ -61,8 +61,13 @@ function GroupLabel({ label }: { label: string }) {
 }
 
 
+const DRAFT_KEY = (threadId: string) => `loxihub_draft_${threadId}`
+
 export function PostForm({ threadId, personagemPrincipal, personagens }: PostFormProps) {
-  const [conteudo, setConteudo] = useState('')
+  const [conteudo, setConteudo] = useState(() => {
+    if (typeof window === 'undefined') return ''
+    return localStorage.getItem(DRAFT_KEY(threadId)) ?? ''
+  })
   const [loading, setLoading] = useState(false)
   const [dropdownOpen, setDropdownOpen] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
@@ -109,6 +114,14 @@ export function PostForm({ threadId, personagemPrincipal, personagens }: PostFor
     return () => document.removeEventListener('mousedown', handleClick)
   }, [])
 
+  useEffect(() => {
+    if (conteudo) {
+      localStorage.setItem(DRAFT_KEY(threadId), conteudo)
+    } else {
+      localStorage.removeItem(DRAFT_KEY(threadId))
+    }
+  }, [conteudo, threadId])
+
   function selectPersonagem(p: Personagem) {
     setSelectedPersonagem(p)
     localStorage.setItem(LAST_PERSONAGEM_KEY, p.id)
@@ -131,6 +144,7 @@ export function PostForm({ threadId, personagemPrincipal, personagens }: PostFor
     })
 
     setConteudo('')
+    localStorage.removeItem(DRAFT_KEY(threadId))
     setLoading(false)
     router.refresh()
   }

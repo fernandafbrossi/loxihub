@@ -3,6 +3,8 @@ import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { Pencil, ArrowLeft, Smartphone, Hash } from 'lucide-react'
 import { GuardaRoupaSection } from './guarda-roupa-section'
+import { InspoSection } from './inspo-section'
+import { VinculosSection } from './vinculos-section'
 
 const card = {
   background: 'rgba(255,255,255,0.60)',
@@ -24,7 +26,7 @@ export default async function PersonagemPage({ params }: { params: Promise<{ id:
 
   const relacoesFetch = supabase
     .from('relacoes_personagens')
-    .select('id, tipo_relacao, personagem_a, personagem_b')
+    .select('id, tipo_relacao, nota, personagem_a, personagem_b')
     .or(`personagem_a.eq.${id},personagem_b.eq.${id}`)
 
   const postsFetch = supabase
@@ -39,17 +41,23 @@ export default async function PersonagemPage({ params }: { params: Promise<{ id:
     .eq('personagem_id', id)
     .order('created_at', { ascending: true })
 
-  const [{ data: relacoes }, { data: posts }, { data: guarda_roupa }] = await Promise.all([
-    relacoesFetch, postsFetch, guardaRoupaFetch,
+  const inspoFetch = supabase
+    .from('inspo_personagem')
+    .select('id, url')
+    .eq('personagem_id', id)
+    .order('created_at', { ascending: true })
+
+  const todosPersonagensFetch = supabase
+    .from('personagens')
+    .select('id, nome, foto_url')
+    .order('nome', { ascending: true })
+
+  const [{ data: relacoes }, { data: posts }, { data: guarda_roupa }, { data: inspo }, { data: todosPersonagens }] = await Promise.all([
+    relacoesFetch, postsFetch, guardaRoupaFetch, inspoFetch, todosPersonagensFetch,
   ])
 
-  const outrosIds = (relacoes ?? []).map(r => r.personagem_a === id ? r.personagem_b : r.personagem_a)
-  const { data: outrosPersonagens } = outrosIds.length > 0
-    ? await supabase.from('personagens').select('id, nome, foto_url').in('id', outrosIds)
-    : { data: [] }
-
   function getPersonagem(pid: string) {
-    return (outrosPersonagens ?? []).find(p => p.id === pid)
+    return (todosPersonagens ?? []).find(p => p.id === pid)
   }
 
   const threadsMap = new Map<string, { id: string; titulo: string; count: number }>()
@@ -212,50 +220,21 @@ export default async function PersonagemPage({ params }: { params: Promise<{ id:
           </div>
         </div>
 
-        {/* ── Base: Relações ── */}
-        {(relacoes ?? []).length > 0 && (
-          <div className="rounded-2xl p-5" style={card}>
-            <p className="text-[10px] uppercase tracking-widest mb-3" style={{ color: '#B09098' }}>
-              Relações
-            </p>
-            <div className="flex gap-3 overflow-x-auto pb-1">
-              {(relacoes ?? []).map(r => {
-                const outroId = r.personagem_a === id ? r.personagem_b : r.personagem_a
-                const outro = getPersonagem(outroId)
-                return (
-                  <Link
-                    key={r.id}
-                    href={`/dashboard/personagens/${outroId}`}
-                    className="flex items-center gap-3 px-4 py-3 rounded-xl flex-shrink-0 transition-opacity hover:opacity-75"
-                    style={{
-                      background: 'rgba(255,255,255,0.55)',
-                      border: '0.5px solid rgba(128,0,32,0.08)',
-                    }}
-                  >
-                    <div
-                      className="w-9 h-9 rounded-full overflow-hidden flex items-center justify-center flex-shrink-0 text-xs font-semibold"
-                      style={{
-                        background: 'linear-gradient(135deg, #C08090, #A06070)',
-                        color: '#FAF0F2',
-                        boxShadow: '0 2px 8px rgba(40,5,15,0.10)',
-                      }}
-                    >
-                      {outro?.foto_url ? (
-                        <img src={outro.foto_url} alt="" className="w-full h-full object-cover" />
-                      ) : (
-                        outro?.nome?.[0]?.toUpperCase() ?? '?'
-                      )}
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium" style={{ color: '#2E0510' }}>{outro?.nome ?? '?'}</p>
-                      <p className="text-[11px]" style={{ color: '#906070' }}>{r.tipo_relacao}</p>
-                    </div>
-                  </Link>
-                )
-              })}
-            </div>
-          </div>
-        )}
+        {/* ── Inspo ── */}
+        <div className="rounded-2xl p-5" style={card}>
+          <InspoSection personagemId={id} inspoInicial={inspo ?? []} />
+        </div>
+
+        {/* ── Vínculos ── */}
+        <VinculosSection
+          personagemId={id}
+          vinculosIniciais={(relacoes ?? []).map(r => {
+            const outroId = r.personagem_a === id ? r.personagem_b : r.personagem_a
+            const outro = getPersonagem(outroId) ?? { id: outroId, nome: '?', foto_url: null }
+            return { id: r.id, tipo_relacao: r.tipo_relacao, nota: r.nota ?? null, outro }
+          })}
+          todosPersonagens={todosPersonagens ?? []}
+        />
 
       </div>
     </div>

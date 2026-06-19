@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { ScrollText, MapPin, Users, Home, LogOut, Menu, X, ArrowLeft, Smartphone, CalendarDays, PanelLeftClose, PanelLeftOpen, GitBranch } from 'lucide-react'
+import { ScrollText, MapPin, Users, Home, LogOut, Menu, X, ArrowLeft, Smartphone, CalendarDays, PanelLeftClose, PanelLeftOpen, GitBranch, Lock } from 'lucide-react'
 import { NotificationBell } from '@/components/notifications-bell'
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
@@ -64,6 +64,7 @@ export function Sidebar({ userEmail }: SidebarProps) {
     { href: `/dashboard/redes-sociais?universo=${universoId}`, label: 'Redes Sociais', icon: Smartphone },
     { href: `/dashboard/arvore?universo=${universoId}`, label: 'Árvore', icon: GitBranch },
     { href: `/dashboard/linha-do-tempo?universo=${universoId}`, label: 'Linha do tempo', icon: CalendarDays },
+    { href: `/dashboard/universos/${universoId}/segredos`, label: 'Segredos', icon: Lock },
   ] : []
 
   async function handleLogout() {
