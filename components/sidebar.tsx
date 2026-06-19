@@ -62,7 +62,7 @@ export function Sidebar({ userEmail }: SidebarProps) {
     { href: `/dashboard/personagens?universo=${universoId}`, label: 'Personagens', icon: Users },
     { href: `/dashboard/lugares?universo=${universoId}`, label: 'Lugares', icon: MapPin },
     { href: `/dashboard/redes-sociais?universo=${universoId}`, label: 'Redes Sociais', icon: Smartphone },
-    { href: `/dashboard/arvore?universo=${universoId}`, label: 'Árvore', icon: GitBranch },
+    { href: `/dashboard/arvore?universo=${universoId}`, label: 'Vínculos', icon: GitBranch },
     { href: `/dashboard/linha-do-tempo?universo=${universoId}`, label: 'Linha do tempo', icon: CalendarDays },
     { href: `/dashboard/universos/${universoId}/segredos`, label: 'Segredos', icon: Lock },
   ] : []

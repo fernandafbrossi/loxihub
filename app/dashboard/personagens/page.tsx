@@ -25,11 +25,11 @@ export default async function PersonagensPage({ searchParams }: { searchParams: 
         </div>
         <div className="flex gap-2">
           <Link
-            href="/dashboard/personagens/arvore"
+            href={`/dashboard/arvore${universo ? `?universo=${universo}` : ''}`}
             className="flex items-center gap-1.5 text-xs px-3 py-2 rounded-lg border transition-opacity hover:opacity-70"
             style={{ borderColor: 'rgba(128,0,32,0.12)', color: '#906070', background: 'rgba(255,255,255,0.50)' }}
           >
-            <GitBranch size={13} /> Árvore
+            <GitBranch size={13} /> Vínculos
           </Link>
           <Link
             href={`/dashboard/personagens/novo${universo ? `?universo=${universo}` : ''}`}

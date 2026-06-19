@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { Plus, GitBranch, Users, Pencil, Trash2 } from 'lucide-react'
+import { Plus, GitBranch, Users, Pencil, Trash2, X } from 'lucide-react'
 import { ImageUpload } from '@/components/image-upload'
 
 /* ─── Layout constants ──────────────────────────────────────────── */
@@ -32,6 +32,12 @@ interface Relacao {
   tipo_relacao: string
   categoria: string | null
 }
+interface RelacaoPers {
+  id: string
+  personagem_a: string
+  personagem_b: string
+  tipo_relacao: string
+}
 
 /* ─── Tree types ────────────────────────────────────────────────── */
 interface Unit {
@@ -54,6 +60,8 @@ interface FlatNode {
   spouseId?: string
 }
 interface FlatLine { key: string; x1: number; y1: number; x2: number; y2: number }
+
+const TIPOS_RELACAO_PERS = ['cônjuge', 'pai/mãe de', 'filho/a de', 'irmão/irmã de', 'prima', 'adotado/a por', 'adotou']
 
 /* ─── Relation options ──────────────────────────────────────────── */
 const REL_OPTS = [
@@ -586,6 +594,17 @@ export default function ArvoreGenealogicaPage() {
   const [savingMembro, setSavingMembro] = useState(false)
   const [savingRel, setSavingRel]       = useState(false)
 
+  // Tab
+  const [activeTab, setActiveTab] = useState<'arvore' | 'vinculos'>('arvore')
+
+  // Outros vínculos
+  const [relacoesPers, setRelacoesPers]       = useState<RelacaoPers[]>([])
+  const [showFormPers, setShowFormPers]       = useState(false)
+  const [pessoaA, setPessoaA]                 = useState('')
+  const [pessoaB, setPessoaB]                 = useState('')
+  const [tipoRelacaoPers, setTipoRelacaoPers] = useState(TIPOS_RELACAO_PERS[0])
+  const [savingPers, setSavingPers]           = useState(false)
+
   // Refs for hit-testing during drag
   const nodesRef   = useRef<FlatNode[]>([])
   const canvasRef  = useRef<HTMLDivElement>(null)
@@ -597,14 +616,17 @@ export default function ArvoreGenealogicaPage() {
     const membrosQ = s.from('membros_arvore').select('*, personagens(foto_url)').order('nome')
     const personagensQ = s.from('personagens').select('id, nome, foto_url').order('nome')
     if (universoId) { membrosQ.eq('universo_id', universoId); personagensQ.eq('universo_id', universoId) }
-    const [{ data: m }, { data: p }, { data: r }] = await Promise.all([
+    const [{ data: m }, { data: p }, { data: r }, { data: rp }] = await Promise.all([
       membrosQ,
       personagensQ,
       s.from('relacoes_arvore').select('*'),
+      s.from('relacoes_personagens').select('*'),
     ])
     setMembros((m as Membro[]) ?? [])
     setPersonagens(p ?? [])
     setRelacoes(r ?? [])
+    const persIds = new Set((p ?? []).map((ps: Personagem) => ps.id))
+    setRelacoesPers((rp ?? []).filter((rel: RelacaoPers) => persIds.has(rel.personagem_a) || persIds.has(rel.personagem_b)))
   }
   useEffect(() => { load() }, [])
 
@@ -707,6 +729,32 @@ export default function ArvoreGenealogicaPage() {
     setSavingRel(false)
   }
 
+  function getNomePers(id: string) {
+    return personagens.find(p => p.id === id)?.nome ?? '?'
+  }
+  function getFotoPers(id: string) {
+    return personagens.find(p => p.id === id)?.foto_url ?? null
+  }
+
+  async function addRelacaoPers(e: React.FormEvent) {
+    e.preventDefault()
+    if (!pessoaA || !pessoaB || pessoaA === pessoaB) return
+    setSavingPers(true)
+    const s = createClient()
+    await s.from('relacoes_personagens').insert({ personagem_a: pessoaA, personagem_b: pessoaB, tipo_relacao: tipoRelacaoPers })
+    setPessoaA('')
+    setPessoaB('')
+    setShowFormPers(false)
+    await load()
+    setSavingPers(false)
+  }
+
+  async function removeRelacaoPers(id: string) {
+    const s = createClient()
+    await s.from('relacoes_personagens').delete().eq('id', id)
+    setRelacoesPers(prev => prev.filter(r => r.id !== id))
+  }
+
   /* ── Computed tree ── */
   const roots = buildUnits(membros, relacoes)
   const tree  = flattenUnits(roots)
@@ -730,101 +778,236 @@ export default function ArvoreGenealogicaPage() {
         background: 'rgba(255,255,255,0.70)', backdropFilter: 'blur(8px)',
         borderBottom: '0.5px solid rgba(128,0,32,0.10)',
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <GitBranch size={15} style={{ color: '#800020' }} />
           <h1 style={{ margin: 0, fontSize: 15, fontWeight: 700, fontFamily: 'Georgia, serif', color: '#2E0510' }}>
-            Árvore genealógica
+            Vínculos
           </h1>
-          {membros.length > 0 && (
-            <span style={{ fontSize: 11, color: '#B09098' }}>{membros.length} membro{membros.length !== 1 ? 's' : ''}</span>
-          )}
-        </div>
-        <button
-          onClick={e => { e.stopPropagation(); setCreateOpen(true) }}
-          style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 14px', borderRadius: 8, background: '#800020', color: '#FAF0F2', border: 'none', fontSize: 12, cursor: 'pointer', fontWeight: 500 }}
-        >
-          <Plus size={13} /> Adicionar pessoa
-        </button>
-      </div>
-
-      {/* Hint bar */}
-      {membros.length > 1 && (
-        <div style={{ padding: '7px 24px', background: 'rgba(128,0,32,0.04)', borderBottom: '0.5px solid rgba(128,0,32,0.07)' }}>
-          <span style={{ fontSize: 11, color: '#906070' }}>
-            Arraste um retrato até outro para criar uma relação · Clique para editar
-          </span>
-        </div>
-      )}
-
-      {/* Canvas */}
-      <div ref={canvasRef} style={{ flex: 1, overflow: 'auto', position: 'relative' }}>
-        {membros.length === 0 ? (
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: 12 }}>
-            <GitBranch size={40} style={{ color: '#D0C0C4' }} />
-            <p style={{ fontSize: 14, color: '#906070', margin: 0 }}>Nenhum membro na árvore ainda.</p>
-            <p style={{ fontSize: 12, color: '#B09098', margin: 0, textAlign: 'center', maxWidth: 280 }}>
-              Adicione pessoas e depois arraste uma até a outra para criar as conexões.
-            </p>
+          {/* Tabs */}
+          <div style={{ display: 'flex', gap: 2, background: 'rgba(128,0,32,0.06)', borderRadius: 8, padding: 3 }}>
             <button
-              onClick={e => { e.stopPropagation(); setCreateOpen(true) }}
-              style={{ marginTop: 4, display: 'flex', alignItems: 'center', gap: 6, padding: '9px 20px', borderRadius: 8, background: '#800020', color: '#FAF0F2', border: 'none', fontSize: 13, cursor: 'pointer' }}
+              onClick={e => { e.stopPropagation(); setActiveTab('arvore') }}
+              style={{
+                padding: '5px 14px', borderRadius: 6, fontSize: 12, fontWeight: activeTab === 'arvore' ? 600 : 400,
+                border: 'none', cursor: 'pointer',
+                background: activeTab === 'arvore' ? '#fff' : 'transparent',
+                color: activeTab === 'arvore' ? '#800020' : '#906070',
+                boxShadow: activeTab === 'arvore' ? '0 1px 4px rgba(128,0,32,0.10)' : 'none',
+                transition: 'all 0.15s',
+              }}
             >
-              <Plus size={13} /> Criar primeira pessoa
+              Árvore genealógica
+            </button>
+            <button
+              onClick={e => { e.stopPropagation(); setActiveTab('vinculos') }}
+              style={{
+                padding: '5px 14px', borderRadius: 6, fontSize: 12, fontWeight: activeTab === 'vinculos' ? 600 : 400,
+                border: 'none', cursor: 'pointer',
+                background: activeTab === 'vinculos' ? '#fff' : 'transparent',
+                color: activeTab === 'vinculos' ? '#800020' : '#906070',
+                boxShadow: activeTab === 'vinculos' ? '0 1px 4px rgba(128,0,32,0.10)' : 'none',
+                transition: 'all 0.15s',
+              }}
+            >
+              Outros vínculos
             </button>
           </div>
+        </div>
+        {activeTab === 'arvore' ? (
+          <button
+            onClick={e => { e.stopPropagation(); setCreateOpen(true) }}
+            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 14px', borderRadius: 8, background: '#800020', color: '#FAF0F2', border: 'none', fontSize: 12, cursor: 'pointer', fontWeight: 500 }}
+          >
+            <Plus size={13} /> Adicionar pessoa
+          </button>
         ) : (
-          <div style={{ position: 'relative', width: tree.w, height: tree.h, minWidth: '100%', minHeight: '100%' }}>
-            {/* SVG lines */}
-            <svg style={{ position: 'absolute', inset: 0, width: tree.w, height: tree.h, overflow: 'visible', pointerEvents: 'none' }}>
-              {tree.lines.map(l => (
-                <line key={l.key} x1={l.x1} y1={l.y1} x2={l.x2} y2={l.y2}
-                  stroke="#800020" strokeWidth="1.2" opacity="0.30" strokeLinecap="round" />
-              ))}
-            </svg>
-
-            {/* Portraits */}
-            {tree.nodes.map(n => (
-              <div
-                key={n.key}
-                style={{ position: 'absolute', left: n.cx - R, top: n.ty, width: D, zIndex: popover?.memberId === n.key ? 20 : 1 }}
-              >
-                <Portrait
-                  m={n.m}
-                  isDragging={draggingId === n.key}
-                  isTarget={targetId === n.key}
-                  onMouseDown={e => onPortraitMouseDown(n.key, e)}
-                  onClick={() => {/* handled in onMouseDown+mouseup cycle */}}
-                />
-              </div>
-            ))}
-
-            {/* Click overlay for popover (separate from drag to avoid conflicts) */}
-            {tree.nodes.map(n => (
-              <div
-                key={`click-${n.key}`}
-                style={{ position: 'absolute', left: n.cx - R, top: n.ty, width: D, height: D + NH, zIndex: 2, cursor: 'pointer' }}
-                onClick={e => onPortraitClick(n, e)}
-              />
-            ))}
-
-            {/* Popover */}
-            {popover && (() => {
-              const m = membros.find(m => m.id === popover.memberId)
-              if (!m) return null
-              return (
-                <ClickPopover
-                  m={m}
-                  x={popover.x}
-                  y={popover.y}
-                  onEdit={() => setEditMembro(m)}
-                  onDelete={() => deleteMembro(m.id)}
-                  onClose={() => setPopover(null)}
-                />
-              )
-            })()}
-          </div>
+          <button
+            onClick={e => { e.stopPropagation(); setShowFormPers(v => !v) }}
+            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 14px', borderRadius: 8, background: '#800020', color: '#FAF0F2', border: 'none', fontSize: 12, cursor: 'pointer', fontWeight: 500 }}
+          >
+            <Plus size={13} /> Adicionar relação
+          </button>
         )}
       </div>
+
+      {activeTab === 'arvore' ? (
+        <>
+          {/* Hint bar */}
+          {membros.length > 1 && (
+            <div style={{ padding: '7px 24px', background: 'rgba(128,0,32,0.04)', borderBottom: '0.5px solid rgba(128,0,32,0.07)' }}>
+              <span style={{ fontSize: 11, color: '#906070' }}>
+                Arraste um retrato até outro para criar uma relação · Clique para editar
+              </span>
+            </div>
+          )}
+
+          {/* Canvas */}
+          <div ref={canvasRef} style={{ flex: 1, overflow: 'auto', position: 'relative' }}>
+            {membros.length === 0 ? (
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: 12 }}>
+                <GitBranch size={40} style={{ color: '#D0C0C4' }} />
+                <p style={{ fontSize: 14, color: '#906070', margin: 0 }}>Nenhum membro na árvore ainda.</p>
+                <p style={{ fontSize: 12, color: '#B09098', margin: 0, textAlign: 'center', maxWidth: 280 }}>
+                  Adicione pessoas e depois arraste uma até a outra para criar as conexões.
+                </p>
+                <button
+                  onClick={e => { e.stopPropagation(); setCreateOpen(true) }}
+                  style={{ marginTop: 4, display: 'flex', alignItems: 'center', gap: 6, padding: '9px 20px', borderRadius: 8, background: '#800020', color: '#FAF0F2', border: 'none', fontSize: 13, cursor: 'pointer' }}
+                >
+                  <Plus size={13} /> Criar primeira pessoa
+                </button>
+              </div>
+            ) : (
+              <div style={{ position: 'relative', width: tree.w, height: tree.h, minWidth: '100%', minHeight: '100%' }}>
+                {/* SVG lines */}
+                <svg style={{ position: 'absolute', inset: 0, width: tree.w, height: tree.h, overflow: 'visible', pointerEvents: 'none' }}>
+                  {tree.lines.map(l => (
+                    <line key={l.key} x1={l.x1} y1={l.y1} x2={l.x2} y2={l.y2}
+                      stroke="#800020" strokeWidth="1.2" opacity="0.30" strokeLinecap="round" />
+                  ))}
+                </svg>
+
+                {/* Portraits */}
+                {tree.nodes.map(n => (
+                  <div
+                    key={n.key}
+                    style={{ position: 'absolute', left: n.cx - R, top: n.ty, width: D, zIndex: popover?.memberId === n.key ? 20 : 1 }}
+                  >
+                    <Portrait
+                      m={n.m}
+                      isDragging={draggingId === n.key}
+                      isTarget={targetId === n.key}
+                      onMouseDown={e => onPortraitMouseDown(n.key, e)}
+                      onClick={() => {/* handled in onMouseDown+mouseup cycle */}}
+                    />
+                  </div>
+                ))}
+
+                {/* Click overlay for popover (separate from drag to avoid conflicts) */}
+                {tree.nodes.map(n => (
+                  <div
+                    key={`click-${n.key}`}
+                    style={{ position: 'absolute', left: n.cx - R, top: n.ty, width: D, height: D + NH, zIndex: 2, cursor: 'pointer' }}
+                    onClick={e => onPortraitClick(n, e)}
+                  />
+                ))}
+
+                {/* Popover */}
+                {popover && (() => {
+                  const m = membros.find(m => m.id === popover.memberId)
+                  if (!m) return null
+                  return (
+                    <ClickPopover
+                      m={m}
+                      x={popover.x}
+                      y={popover.y}
+                      onEdit={() => setEditMembro(m)}
+                      onDelete={() => deleteMembro(m.id)}
+                      onClose={() => setPopover(null)}
+                    />
+                  )
+                })()}
+              </div>
+            )}
+          </div>
+        </>
+      ) : (
+        /* ── Aba: Outros vínculos ── */
+        <div style={{ flex: 1, overflow: 'auto', padding: '24px', maxWidth: 760 }}>
+
+          {/* Formulário nova relação */}
+          {showFormPers && (
+            <div style={{ borderRadius: 12, border: '0.5px solid rgba(128,0,32,0.10)', padding: 20, marginBottom: 20, background: 'rgba(255,255,255,0.60)' }}>
+              <p style={{ margin: '0 0 14px', fontWeight: 600, fontSize: 14, color: '#2E0510' }}>Nova relação</p>
+              <form onSubmit={addRelacaoPers} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, alignItems: 'end' }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: 11, color: '#906070', marginBottom: 5, fontWeight: 500 }}>Personagem A</label>
+                    <select value={pessoaA} onChange={e => setPessoaA(e.target.value)} required style={sel}>
+                      <option value="">Selecionar...</option>
+                      {personagens.map(p => <option key={p.id} value={p.id}>{p.nome}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: 11, color: '#906070', marginBottom: 5, fontWeight: 500 }}>Tipo de relação</label>
+                    <select value={tipoRelacaoPers} onChange={e => setTipoRelacaoPers(e.target.value)} style={sel}>
+                      {TIPOS_RELACAO_PERS.map(t => <option key={t} value={t}>{t}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: 11, color: '#906070', marginBottom: 5, fontWeight: 500 }}>Personagem B</label>
+                    <select value={pessoaB} onChange={e => setPessoaB(e.target.value)} required style={sel}>
+                      <option value="">Selecionar...</option>
+                      {personagens.map(p => <option key={p.id} value={p.id}>{p.nome}</option>)}
+                    </select>
+                  </div>
+                </div>
+                <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+                  <Btn ghost onClick={() => setShowFormPers(false)}>Cancelar</Btn>
+                  <Btn primary disabled={savingPers}>
+                    {savingPers ? 'Salvando...' : 'Adicionar'}
+                  </Btn>
+                </div>
+              </form>
+            </div>
+          )}
+
+          {/* Grid de avatares */}
+          {personagens.length > 0 && (
+            <div style={{ borderRadius: 12, border: '0.5px solid rgba(128,0,32,0.10)', padding: 20, marginBottom: 20, background: 'rgba(255,255,255,0.60)', overflowX: 'auto' }}>
+              <div style={{ display: 'flex', gap: 20, justifyContent: 'center', flexWrap: 'wrap', minHeight: 96 }}>
+                {personagens.map(p => (
+                  <a key={p.id} href={`/dashboard/personagens/${p.id}`} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, textDecoration: 'none' }}>
+                    <div style={{ width: 56, height: 56, borderRadius: '50%', overflow: 'hidden', border: '1.5px solid #800020', background: 'rgba(128,0,32,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      {p.foto_url
+                        ? <img src={p.foto_url} alt={p.nome} style={{ width: '100%', height: '100%', objectFit: 'cover', filter: 'grayscale(1)', transition: 'filter 0.3s' }} />
+                        : <Users size={20} style={{ color: '#906070' }} />}
+                    </div>
+                    <span style={{ fontSize: 10, color: '#2E0510', maxWidth: 72, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', textAlign: 'center' }}>{p.nome}</span>
+                  </a>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Lista de relações */}
+          <div>
+            <p style={{ fontSize: 13, fontWeight: 600, color: '#2E0510', margin: '0 0 12px' }}>
+              Relações ({relacoesPers.length})
+            </p>
+            {relacoesPers.length === 0 ? (
+              <p style={{ fontSize: 13, color: '#906070' }}>Nenhuma relação cadastrada ainda.</p>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {relacoesPers.map(r => (
+                  <div key={r.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', borderRadius: 12, border: '0.5px solid rgba(128,0,32,0.10)', background: 'rgba(255,255,255,0.60)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <div style={{ width: 32, height: 32, borderRadius: '50%', overflow: 'hidden', background: 'rgba(128,0,32,0.08)', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          {getFotoPers(r.personagem_a) ? <img src={getFotoPers(r.personagem_a)!} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <Users size={14} style={{ color: '#906070' }} />}
+                        </div>
+                        <span style={{ fontSize: 13, fontWeight: 500, color: '#2E0510' }}>{getNomePers(r.personagem_a)}</span>
+                      </div>
+                      <span style={{ fontSize: 11, padding: '3px 10px', borderRadius: 20, background: 'rgba(128,0,32,0.07)', color: '#D0A0A8' }}>
+                        {r.tipo_relacao}
+                      </span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <div style={{ width: 32, height: 32, borderRadius: '50%', overflow: 'hidden', background: 'rgba(128,0,32,0.08)', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          {getFotoPers(r.personagem_b) ? <img src={getFotoPers(r.personagem_b)!} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <Users size={14} style={{ color: '#906070' }} />}
+                        </div>
+                        <span style={{ fontSize: 13, fontWeight: 500, color: '#2E0510' }}>{getNomePers(r.personagem_b)}</span>
+                      </div>
+                    </div>
+                    <button onClick={() => removeRelacaoPers(r.id)} style={{ padding: 6, borderRadius: 6, border: 'none', background: 'none', cursor: 'pointer', color: '#906070' }}>
+                      <X size={14} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Modals */}
       {createOpen && (
