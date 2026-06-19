@@ -163,7 +163,7 @@ export function InstagramTab({
     return (
       <div className="text-center py-10 opacity-50">
         <p className="text-sm" style={{ color: '#906070' }}>Nenhuma conta Instagram ainda</p>
-        <p className="text-xs mt-1" style={{ color: '#B09098' }}>Clique em "+ nova conta" acima para começar</p>
+        <p className="text-xs mt-1" style={{ color: '#B09098' }}>Crie uma conta Instagram em Gerenciar contas</p>
       </div>
     )
   }

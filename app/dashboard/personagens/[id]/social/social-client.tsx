@@ -4,8 +4,7 @@ import { useState, useRef, useEffect } from 'react'
 import Link from 'next/link'
 import { TwitterTab } from './twitter-tab'
 import { InstagramTab } from './instagram-tab'
-import { ArrowLeft, Settings, ChevronDown, Plus, X } from 'lucide-react'
-import { createClient } from '@/lib/supabase/client'
+import { ArrowLeft, Settings, ChevronDown, Plus } from 'lucide-react'
 
 export interface PersonagemBasic {
   id: string
