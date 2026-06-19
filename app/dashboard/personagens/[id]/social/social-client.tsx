@@ -148,10 +148,11 @@ export function SocialClient({
       </Link>
 
     <div style={{ width: '100%', maxWidth: 1100, background: '#FFFFFF', borderRadius: 16, overflow: 'hidden', minHeight: '100%' }}>
+    <div style={{ maxWidth: 680, margin: '0 auto' }}>
       {/* ── Header dinâmico ── */}
       {tab === 'instagram' ? (
         /* Instagram header */
-        <div className="px-10 pt-10 pb-3" style={{ borderBottom: '0.5px solid rgba(128,0,32,0.08)' }}>
+        <div className="px-4 pt-10 pb-3" style={{ borderBottom: '0.5px solid rgba(128,0,32,0.08)' }}>
           <div className="flex items-center justify-center mb-4">
             <p className="text-sm font-semibold" style={{ color: '#2E0510' }}>
               {currentInstagramConta?.username ?? personagem.nome.toLowerCase().replace(/\s+/g, '_')}
@@ -191,7 +192,7 @@ export function SocialClient({
         </div>
       ) : (
         /* Twitter header — simples, sem banner */
-        <div className="px-10 pt-4 pb-3" style={{ borderBottom: '0.5px solid rgba(128,0,32,0.08)' }}>
+        <div className="px-4 pt-4 pb-3" style={{ borderBottom: '0.5px solid rgba(128,0,32,0.08)' }}>
           <div className="flex items-center gap-3 mb-2 mt-6">
             <div
               className="w-14 h-14 rounded-full overflow-hidden flex-shrink-0 flex items-center justify-center font-bold text-xl"
@@ -225,7 +226,7 @@ export function SocialClient({
       )}
 
       {/* ── Tab switcher ── */}
-      <div className="flex border-b" style={{ borderColor: 'rgba(128,0,32,0.10)', paddingLeft: 40 }}>
+      <div className="flex border-b" style={{ borderColor: 'rgba(128,0,32,0.10)' }}>
         <button
           onClick={() => setTab('instagram')}
           className="flex items-center gap-2 px-6 py-3 text-xs font-medium transition-all relative"
@@ -253,7 +254,7 @@ export function SocialClient({
       </div>
 
       {/* ── Seletores de conta + nova conta ── */}
-      <div className="flex items-center gap-2 px-10 pt-3 pb-1 flex-wrap">
+      <div className="flex items-center gap-2 px-4 pt-3 pb-1 flex-wrap">
         {currentContas.map(c => (
           <button key={c.id}
             onClick={() => setSelectedId(c.id)}
@@ -276,7 +277,7 @@ export function SocialClient({
       </div>
 
       {/* ── Agindo como ── */}
-      <div className="px-10 pb-1">
+      <div className="px-4 pb-1">
         <div className="relative inline-block" ref={pickerRef}>
           <button
             onClick={() => setPickerOpen(v => !v)}
@@ -313,12 +314,13 @@ export function SocialClient({
       </div>
 
       {/* ── Conteúdo da aba ── */}
-      <div className="px-10 pt-3 pb-8">
+      <div className="px-4 pt-3 pb-8">
         {tab === 'twitter'
           ? <TwitterTab {...commonTabProps} currentConta={currentTwitterConta} allPosts={twitterPosts} />
           : <InstagramTab {...commonTabProps} currentConta={currentInstagramConta} allPosts={instagramPosts} onNewPostRef={fn => { instagramNewPostFnRef.current = fn }} />
         }
       </div>
+    </div>
     </div>
     </div>
   )
