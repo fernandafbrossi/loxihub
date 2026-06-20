@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
-import { Hash, Plus, Search, PanelLeftClose, PanelLeftOpen, X, ScrollText } from 'lucide-react'
+import { Hash, Plus, Search, PanelLeftClose, PanelLeftOpen, X, ScrollText, BookOpen } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 
 interface Thread {
@@ -54,10 +54,17 @@ function Snippet({ text, query }: { text: string; query: string }) {
 
 export function ThreadSidebar({ threads, currentId, novaThreadHref }: ThreadSidebarProps) {
   const [collapsed, setCollapsed] = useState(false)
+  const [isMobile, setIsMobile] = useState(false)
   const [query, setQuery] = useState('')
   const [postResults, setPostResults] = useState<PostResult[]>([])
   const [searching, setSearching] = useState(false)
   const debouncedQuery = useDebounce(query, 350)
+
+  useEffect(() => {
+    const mobile = window.innerWidth < 768
+    setIsMobile(mobile)
+    if (mobile) setCollapsed(true)
+  }, [])
 
   const filteredThreads = query.trim()
     ? threads.filter(t =>
@@ -91,6 +98,162 @@ export function ThreadSidebar({ threads, currentId, novaThreadHref }: ThreadSide
       })
   }, [debouncedQuery])
 
+  const hasQuery = query.trim().length >= 2
+  const threadIdsFromPosts = new Set(postResults.map(p => p.thread_id))
+  const threadsThatMatch = hasQuery ? threads.filter(t => threadIdsFromPosts.has(t.id) && !filteredThreads.find(ft => ft.id === t.id)) : []
+
+  // ── Conteúdo interno (compartilhado entre mobile e desktop) ──
+  function InnerContent({ onSelect }: { onSelect?: () => void }) {
+    return (
+      <>
+        {/* Search */}
+        <div className="px-3 pb-2">
+          <div className="relative">
+            <Search size={11} className="absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: '#B09098' }} />
+            <input
+              type="text"
+              value={query}
+              onChange={e => setQuery(e.target.value)}
+              placeholder="Buscar em tudo..."
+              className="w-full pl-7 pr-6 py-1.5 rounded-lg text-[11px] outline-none"
+              style={{
+                background: 'rgba(255,255,255,0.55)',
+                border: '0.5px solid rgba(128,0,32,0.12)',
+                color: '#2E0510',
+              }}
+            />
+            {query && (
+              <button
+                onClick={() => setQuery('')}
+                className="absolute right-2 top-1/2 -translate-y-1/2 hover:opacity-70 transition-opacity"
+                style={{ color: '#B09098' }}
+              >
+                <X size={10} />
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Thread list */}
+        <nav className="flex-1 overflow-y-auto px-2 pb-4 flex flex-col gap-0.5">
+          {filteredThreads.length === 0 && !hasQuery && (
+            <p className="text-[10px] px-3 py-2" style={{ color: '#B09098' }}>Nenhuma thread encontrada.</p>
+          )}
+          {filteredThreads.map(t => {
+            const active = t.id === currentId
+            return (
+              <Link
+                key={t.id}
+                href={`/dashboard/threads/${t.id}`}
+                onClick={onSelect}
+                className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs transition-all"
+                style={{
+                  background: active ? '#800020' : 'transparent',
+                  color: active ? '#FAF0F2' : '#906070',
+                  boxShadow: active ? '0 2px 10px rgba(128,0,32,0.30)' : 'none',
+                  fontWeight: active ? 500 : 400,
+                }}
+              >
+                <Hash size={11} style={{ flexShrink: 0 }} />
+                <span className="truncate">{t.titulo}</span>
+              </Link>
+            )
+          })}
+
+          {hasQuery && (
+            <>
+              {searching && (
+                <p className="text-[10px] px-3 py-2" style={{ color: '#B09098' }}>Buscando posts...</p>
+              )}
+              {!searching && postResults.length === 0 && filteredThreads.length === 0 && (
+                <p className="text-[10px] px-3 py-2" style={{ color: '#B09098' }}>Nenhum resultado encontrado.</p>
+              )}
+              {!searching && postResults.length > 0 && (
+                <>
+                  <p className="text-[9px] font-medium uppercase tracking-widest px-3 pt-3 pb-1" style={{ color: '#B09098' }}>
+                    Posts ({postResults.length})
+                  </p>
+                  {postResults.map(p => (
+                    <Link
+                      key={p.id}
+                      href={`/dashboard/threads/${p.thread_id}`}
+                      onClick={onSelect}
+                      className="flex flex-col gap-0.5 px-3 py-2 rounded-lg transition-all hover:opacity-80"
+                      style={{ background: 'rgba(128,0,32,0.04)' }}
+                    >
+                      <div className="flex items-center gap-1.5">
+                        <ScrollText size={9} style={{ color: '#906070', flexShrink: 0 }} />
+                        <span className="text-[10px] font-medium truncate" style={{ color: '#800020' }}>
+                          {p.thread_titulo}
+                        </span>
+                      </div>
+                      {p.personagem_pov && (
+                        <span className="text-[9px]" style={{ color: '#906070' }}>{p.personagem_pov}</span>
+                      )}
+                      <Snippet text={p.conteudo} query={debouncedQuery} />
+                    </Link>
+                  ))}
+                </>
+              )}
+            </>
+          )}
+        </nav>
+      </>
+    )
+  }
+
+  // ── Mobile: collapsed → botão flutuante ──
+  if (isMobile && collapsed) {
+    return (
+      <button
+        onClick={() => setCollapsed(false)}
+        className="fixed z-40 flex items-center gap-1.5 px-3 py-2 rounded-full shadow-lg"
+        style={{
+          bottom: 88,
+          right: 16,
+          background: '#800020',
+          color: '#FAF0F2',
+          boxShadow: '0 4px 16px rgba(128,0,32,0.40)',
+        }}
+      >
+        <BookOpen size={14} />
+        <span className="text-xs font-medium">Capítulos</span>
+      </button>
+    )
+  }
+
+  // ── Mobile: expandido → overlay full ──
+  if (isMobile && !collapsed) {
+    return (
+      <div className="fixed inset-0 z-50 flex">
+        <div
+          className="w-72 h-full flex flex-col overflow-hidden"
+          style={{
+            background: 'rgba(247,240,243,0.97)',
+            borderRight: '0.5px solid rgba(128,0,32,0.10)',
+            backdropFilter: 'blur(12px)',
+            WebkitBackdropFilter: 'blur(12px)',
+          }}
+        >
+          <div className="px-4 pt-14 pb-2 flex items-center justify-between flex-shrink-0">
+            <p className="text-[9px] font-medium uppercase tracking-widest" style={{ color: '#B09098' }}>Capítulos</p>
+            <div className="flex items-center gap-2">
+              <Link href={novaThreadHref} title="Nova thread">
+                <Plus size={14} style={{ color: '#906070' }} className="hover:opacity-70 transition-opacity" />
+              </Link>
+              <button onClick={() => setCollapsed(true)} style={{ color: '#906070' }}>
+                <X size={18} />
+              </button>
+            </div>
+          </div>
+          <InnerContent onSelect={() => setCollapsed(true)} />
+        </div>
+        <div className="flex-1 bg-black/40" onClick={() => setCollapsed(true)} />
+      </div>
+    )
+  }
+
+  // ── Desktop: collapsed → coluna estreita ──
   if (collapsed) {
     return (
       <div
@@ -113,10 +276,7 @@ export function ThreadSidebar({ threads, currentId, novaThreadHref }: ThreadSide
     )
   }
 
-  const hasQuery = query.trim().length >= 2
-  const threadIdsFromPosts = new Set(postResults.map(p => p.thread_id))
-  const threadsThatMatch = hasQuery ? threads.filter(t => threadIdsFromPosts.has(t.id) && !filteredThreads.find(ft => ft.id === t.id)) : []
-
+  // ── Desktop: expandido ──
   return (
     <div
       className="w-56 flex-shrink-0 flex flex-col overflow-hidden"
@@ -125,11 +285,8 @@ export function ThreadSidebar({ threads, currentId, novaThreadHref }: ThreadSide
         borderRight: '0.5px solid rgba(128,0,32,0.10)',
       }}
     >
-      {/* Header */}
-      <div className="px-4 pt-5 pb-2 flex items-center justify-between">
-        <p className="text-[9px] font-medium uppercase tracking-widest" style={{ color: '#B09098' }}>
-          Capítulos
-        </p>
+      <div className="px-4 pt-5 pb-2 flex items-center justify-between flex-shrink-0">
+        <p className="text-[9px] font-medium uppercase tracking-widest" style={{ color: '#B09098' }}>Capítulos</p>
         <div className="flex items-center gap-1.5">
           <Link href={novaThreadHref} title="Nova thread">
             <Plus size={13} style={{ color: '#906070' }} className="hover:opacity-70 transition-opacity" />
@@ -139,102 +296,7 @@ export function ThreadSidebar({ threads, currentId, novaThreadHref }: ThreadSide
           </button>
         </div>
       </div>
-
-      {/* Search */}
-      <div className="px-3 pb-2">
-        <div className="relative">
-          <Search size={11} className="absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: '#B09098' }} />
-          <input
-            type="text"
-            value={query}
-            onChange={e => setQuery(e.target.value)}
-            placeholder="Buscar em tudo..."
-            className="w-full pl-7 pr-6 py-1.5 rounded-lg text-[11px] outline-none"
-            style={{
-              background: 'rgba(255,255,255,0.55)',
-              border: '0.5px solid rgba(128,0,32,0.12)',
-              color: '#2E0510',
-            }}
-          />
-          {query && (
-            <button
-              onClick={() => setQuery('')}
-              className="absolute right-2 top-1/2 -translate-y-1/2 hover:opacity-70 transition-opacity"
-              style={{ color: '#B09098' }}
-            >
-              <X size={10} />
-            </button>
-          )}
-        </div>
-      </div>
-
-      {/* Thread list */}
-      <nav className="flex-1 overflow-y-auto px-2 pb-4 flex flex-col gap-0.5">
-
-        {/* Threads por título */}
-        {filteredThreads.length === 0 && !hasQuery && (
-          <p className="text-[10px] px-3 py-2" style={{ color: '#B09098' }}>
-            Nenhuma thread encontrada.
-          </p>
-        )}
-        {filteredThreads.map(t => {
-          const active = t.id === currentId
-          return (
-            <Link
-              key={t.id}
-              href={`/dashboard/threads/${t.id}`}
-              className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs transition-all"
-              style={{
-                background: active ? '#800020' : 'transparent',
-                color: active ? '#FAF0F2' : '#906070',
-                boxShadow: active ? '0 2px 10px rgba(128,0,32,0.30)' : 'none',
-                fontWeight: active ? 500 : 400,
-              }}
-            >
-              <Hash size={11} style={{ flexShrink: 0 }} />
-              <span className="truncate">{t.titulo}</span>
-            </Link>
-          )
-        })}
-
-        {/* Resultados de posts */}
-        {hasQuery && (
-          <>
-            {searching && (
-              <p className="text-[10px] px-3 py-2" style={{ color: '#B09098' }}>Buscando posts...</p>
-            )}
-            {!searching && postResults.length === 0 && filteredThreads.length === 0 && (
-              <p className="text-[10px] px-3 py-2" style={{ color: '#B09098' }}>Nenhum resultado encontrado.</p>
-            )}
-            {!searching && postResults.length > 0 && (
-              <>
-                <p className="text-[9px] font-medium uppercase tracking-widest px-3 pt-3 pb-1" style={{ color: '#B09098' }}>
-                  Posts ({postResults.length})
-                </p>
-                {postResults.map(p => (
-                  <Link
-                    key={p.id}
-                    href={`/dashboard/threads/${p.thread_id}`}
-                    className="flex flex-col gap-0.5 px-3 py-2 rounded-lg transition-all hover:opacity-80"
-                    style={{ background: 'rgba(128,0,32,0.04)' }}
-                  >
-                    <div className="flex items-center gap-1.5">
-                      <ScrollText size={9} style={{ color: '#906070', flexShrink: 0 }} />
-                      <span className="text-[10px] font-medium truncate" style={{ color: '#800020' }}>
-                        {p.thread_titulo}
-                      </span>
-                    </div>
-                    {p.personagem_pov && (
-                      <span className="text-[9px]" style={{ color: '#906070' }}>{p.personagem_pov}</span>
-                    )}
-                    <Snippet text={p.conteudo} query={debouncedQuery} />
-                  </Link>
-                ))}
-              </>
-            )}
-          </>
-        )}
-      </nav>
+      <InnerContent />
     </div>
   )
 }

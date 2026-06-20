@@ -276,7 +276,7 @@ export function PostForm({ threadId, personagemPrincipal, personagens }: PostFor
         </button>
       </div>
 
-      <p className="text-[10px] mt-1.5 ml-1" style={{ color: '#B09098' }}>
+      <p className="hidden md:block text-[10px] mt-1.5 ml-1" style={{ color: '#B09098' }}>
         Ctrl+Enter para enviar
       </p>
     </form>
