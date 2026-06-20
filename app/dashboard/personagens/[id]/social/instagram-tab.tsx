@@ -281,8 +281,8 @@ export function InstagramTab({
                 </div>
 
                 <div className="flex items-center gap-4 mb-2">
-                  <EditableNum value={eng.curtidas} icon={<Heart size={12} style={{ color: '#C09098' }} />} label="curtidas fictícias" onSave={v => updateEngagement(selected.id, 'curtidas', v)} />
-                  <EditableNum value={eng.comentarios} icon={<MessageCircle size={12} style={{ color: '#C09098' }} />} label="comentários fictícios" onSave={v => updateEngagement(selected.id, 'comentarios', v)} />
+                  <EditableNum value={eng.curtidas} icon={<Heart size={12} style={{ color: '#C09098' }} />} label="curtidas" onSave={v => updateEngagement(selected.id, 'curtidas', v)} />
+                  <EditableNum value={eng.comentarios} icon={<MessageCircle size={12} style={{ color: '#C09098' }} />} label="comentários" onSave={v => updateEngagement(selected.id, 'comentarios', v)} />
                 </div>
 
                 {postCurtidas.length > 0 && (() => {
