@@ -170,8 +170,11 @@ export default async function ThreadPage({ params }: { params: Promise<{ id: str
         {/* Form */}
         {thread.status === 'em_andamento' && (
           <div
-            className="flex-shrink-0 px-6 py-4"
-            style={{ borderTop: '0.5px solid rgba(128,0,32,0.08)' }}
+            className="flex-shrink-0 px-4 md:px-6 py-4"
+            style={{
+              borderTop: '0.5px solid rgba(128,0,32,0.08)',
+              paddingBottom: 'max(16px, env(safe-area-inset-bottom))',
+            }}
           >
             <CenaForm threadId={id} personagens={personagens ?? []} lugares={lugares ?? []} />
             <PostForm

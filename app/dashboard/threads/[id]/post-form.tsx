@@ -231,17 +231,17 @@ export function PostForm({ threadId, personagemPrincipal, personagens }: PostFor
       </div>
 
       {/* Toolbar de formatação */}
-      <div className="flex gap-1 mb-2">
+      <div className="flex gap-1.5 mb-2">
         {([['bold', Bold, 'Negrito'], ['italic', Italic, 'Itálico'], ['underline', Underline, 'Sublinhado'], ['strikethrough', Strikethrough, 'Riscado']] as const).map(([fmt, Icon, label]) => (
           <button
             key={fmt}
             type="button"
             title={label}
             onClick={() => applyFormat(fmt)}
-            className="p-1.5 rounded-md transition-opacity hover:opacity-70"
+            className="p-2.5 md:p-1.5 rounded-md transition-opacity hover:opacity-70"
             style={{ background: 'rgba(128,0,32,0.07)', color: '#800020' }}
           >
-            <Icon size={12} />
+            <Icon size={14} />
           </button>
         ))}
       </div>
@@ -269,10 +269,10 @@ export function PostForm({ threadId, personagemPrincipal, personagens }: PostFor
         <button
           type="submit"
           disabled={loading || !conteudo.trim()}
-          className="flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center disabled:opacity-30 transition-opacity hover:opacity-80"
+          className="flex-shrink-0 w-11 h-11 md:w-8 md:h-8 rounded-xl md:rounded-lg flex items-center justify-center disabled:opacity-30 transition-opacity hover:opacity-80"
           style={{ background: '#800020', color: '#FAF0F2' }}
         >
-          <Send size={14} />
+          <Send size={15} />
         </button>
       </div>
 
