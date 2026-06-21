@@ -140,11 +140,45 @@ export function SocialClient({
         style={{ color: '#906070' }}>
         <ArrowLeft size={12} /> Perfil
       </Link>
-      <Link href={`/dashboard/personagens/${personagemId}/social/editar`}
-        className="absolute right-6 top-6 hover:opacity-70 transition-opacity z-10"
-        style={{ color: '#906070' }}>
-        <Settings size={17} />
-      </Link>
+      <div className="absolute right-6 top-6 flex items-center gap-2 z-10">
+        <div className="relative" ref={pickerRef}>
+          <button
+            onClick={() => setPickerOpen(v => !v)}
+            className="flex items-center gap-2 text-xs px-3 py-1.5 rounded-xl transition-opacity hover:opacity-80"
+            style={{ background: 'rgba(128,0,32,0.07)', border: '0.5px solid rgba(128,0,32,0.12)', color: '#906070' }}
+          >
+            <span style={{ color: '#B09098' }}>Agindo como</span>
+            {actingAs ? (
+              <>
+                <CharAvatar p={actingAs} size={18} />
+                <span className="font-medium" style={{ color: '#2E0510' }}>{actingAs.nome}</span>
+              </>
+            ) : (
+              <span style={{ color: '#B09098' }}>ninguém</span>
+            )}
+            <ChevronDown size={11} style={{ color: '#B09098' }} />
+          </button>
+          {pickerOpen && (
+            <div className="absolute top-full right-0 mt-1 z-20 rounded-xl overflow-hidden py-1 min-w-[180px]"
+              style={{ background: 'rgba(255,255,255,0.97)', border: '0.5px solid rgba(128,0,32,0.12)', boxShadow: '0 8px 24px rgba(40,5,15,0.12)', backdropFilter: 'blur(8px)' }}>
+              {todosPersonagens.map(p => (
+                <button key={p.id}
+                  onClick={() => { setActingAs(p); setPickerOpen(false) }}
+                  className="flex items-center gap-2.5 w-full px-3 py-2 text-left transition-colors hover:opacity-75"
+                  style={{ background: actingAs?.id === p.id ? 'rgba(128,0,32,0.07)' : 'transparent' }}>
+                  <CharAvatar p={p} size={24} />
+                  <span className="text-xs font-medium" style={{ color: '#2E0510' }}>{p.nome}</span>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+        <Link href={`/dashboard/personagens/${personagemId}/social/editar`}
+          className="hover:opacity-70 transition-opacity"
+          style={{ color: '#906070' }}>
+          <Settings size={17} />
+        </Link>
+      </div>
 
     <div style={{ width: '100%', maxWidth: 1100, background: '#FFFFFF', borderRadius: 16, overflow: 'hidden', minHeight: '100%' }}>
     <div style={{ maxWidth: 680, margin: '0 auto' }}>
@@ -273,43 +307,6 @@ export function SocialClient({
             <Plus size={13} /> novo post
           </button>
         )}
-      </div>
-
-      {/* ── Agindo como ── */}
-      <div className="px-4 pb-1">
-        <div className="relative inline-block" ref={pickerRef}>
-          <button
-            onClick={() => setPickerOpen(v => !v)}
-            className="flex items-center gap-2 text-xs px-3 py-1.5 rounded-xl transition-opacity hover:opacity-80"
-            style={{ background: 'rgba(128,0,32,0.07)', border: '0.5px solid rgba(128,0,32,0.12)', color: '#906070' }}
-          >
-            <span style={{ color: '#B09098' }}>Agindo como</span>
-            {actingAs ? (
-              <>
-                <CharAvatar p={actingAs} size={18} />
-                <span className="font-medium" style={{ color: '#2E0510' }}>{actingAs.nome}</span>
-              </>
-            ) : (
-              <span style={{ color: '#B09098' }}>ninguém</span>
-            )}
-            <ChevronDown size={11} style={{ color: '#B09098' }} />
-          </button>
-
-          {pickerOpen && (
-            <div className="absolute top-full left-0 mt-1 z-20 rounded-xl overflow-hidden py-1 min-w-[180px]"
-              style={{ background: 'rgba(255,255,255,0.97)', border: '0.5px solid rgba(128,0,32,0.12)', boxShadow: '0 8px 24px rgba(40,5,15,0.12)', backdropFilter: 'blur(8px)' }}>
-              {todosPersonagens.map(p => (
-                <button key={p.id}
-                  onClick={() => { setActingAs(p); setPickerOpen(false) }}
-                  className="flex items-center gap-2.5 w-full px-3 py-2 text-left transition-colors hover:opacity-75"
-                  style={{ background: actingAs?.id === p.id ? 'rgba(128,0,32,0.07)' : 'transparent' }}>
-                  <CharAvatar p={p} size={24} />
-                  <span className="text-xs font-medium" style={{ color: '#2E0510' }}>{p.nome}</span>
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
       </div>
 
       {/* ── Conteúdo da aba ── */}
