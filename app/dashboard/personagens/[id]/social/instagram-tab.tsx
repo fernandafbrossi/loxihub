@@ -269,7 +269,7 @@ export function InstagramTab({
                 <button onClick={() => { setSelected(null); setEditingCaption(false) }} style={{ color: '#B09098' }}><X size={16} /></button>
               </div>
 
-              {selected.midia_url && <img src={selected.midia_url} alt="" className="w-full object-cover flex-shrink-0" style={{ maxHeight: 280 }} />}
+              {selected.midia_url && <img src={selected.midia_url} alt="" className="w-full h-auto flex-shrink-0" />}
 
               <div className="px-4 pt-3 pb-2 flex-shrink-0">
                 <div className="flex items-center gap-3 mb-2">
