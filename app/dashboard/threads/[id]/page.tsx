@@ -89,7 +89,7 @@ export default async function ThreadPage({ params }: { params: Promise<{ id: str
           style={{ paddingTop: 52, paddingBottom: 14, borderBottom: '0.5px solid rgba(128,0,32,0.08)' }}
         >
           <Link
-            href={thread.universo_id ? `/dashboard/threads?universo=${thread.universo_id}` : '/dashboard/threads'}
+            href={thread.universo_id ? `/dashboard/universos/${thread.universo_id}` : '/dashboard'}
             className="flex-shrink-0 p-1 -ml-1 rounded-lg hover:opacity-70 transition-opacity"
             style={{ color: '#2E0510' }}
           >
