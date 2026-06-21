@@ -1,9 +1,10 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { Hash, Plus, Search, PanelLeftClose, PanelLeftOpen, X, ScrollText } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
+import { useRouter } from 'next/navigation'
 
 interface Thread {
   id: string
@@ -52,7 +53,17 @@ function Snippet({ text, query }: { text: string; query: string }) {
   )
 }
 
-export function ThreadSidebar({ threads, currentId, novaThreadHref }: ThreadSidebarProps) {
+function SidebarContent({
+  threads,
+  currentId,
+  novaThreadHref,
+  onClose,
+}: {
+  threads: Thread[]
+  currentId: string
+  novaThreadHref: string
+  onClose?: () => void
+}) {
   const [collapsed, setCollapsed] = useState(false)
   const [query, setQuery] = useState('')
   const [postResults, setPostResults] = useState<PostResult[]>([])
@@ -92,9 +103,7 @@ export function ThreadSidebar({ threads, currentId, novaThreadHref }: ThreadSide
   }, [debouncedQuery])
 
   const hasQuery = query.trim().length >= 2
-  const threadIdsFromPosts = new Set(postResults.map(p => p.thread_id))
 
-  // ── Desktop collapsed ──
   if (collapsed) {
     return (
       <div
@@ -117,27 +126,37 @@ export function ThreadSidebar({ threads, currentId, novaThreadHref }: ThreadSide
     )
   }
 
-  // ── Desktop expanded ──
   return (
-    <div
-      className="hidden md:flex w-56 flex-shrink-0 flex-col overflow-hidden"
-      style={{
-        background: 'rgba(255,255,255,0.28)',
-        borderRight: '0.5px solid rgba(128,0,32,0.10)',
-      }}
-    >
+    <div className="flex flex-col h-full overflow-hidden">
       {/* Header */}
       <div className="px-4 pt-5 pb-2 flex items-center justify-between flex-shrink-0">
         <p className="text-[9px] font-medium uppercase tracking-widest" style={{ color: '#B09098' }}>
           Capítulos
         </p>
         <div className="flex items-center gap-1.5">
-          <Link href={novaThreadHref} title="Nova thread">
+          <Link href={novaThreadHref} title="Nova thread" onClick={onClose}>
             <Plus size={13} style={{ color: '#906070' }} className="hover:opacity-70 transition-opacity" />
           </Link>
-          <button onClick={() => setCollapsed(true)} title="Minimizar" className="hover:opacity-70 transition-opacity" style={{ color: '#906070' }}>
+          {/* Desktop collapse */}
+          <button
+            onClick={() => setCollapsed(true)}
+            title="Minimizar"
+            className="hidden md:block hover:opacity-70 transition-opacity"
+            style={{ color: '#906070' }}
+          >
             <PanelLeftClose size={13} />
           </button>
+          {/* Mobile close */}
+          {onClose && (
+            <button
+              onClick={onClose}
+              title="Fechar"
+              className="md:hidden hover:opacity-70 transition-opacity"
+              style={{ color: '#906070' }}
+            >
+              <X size={15} />
+            </button>
+          )}
         </div>
       </div>
 
@@ -182,6 +201,7 @@ export function ThreadSidebar({ threads, currentId, novaThreadHref }: ThreadSide
             <Link
               key={t.id}
               href={`/dashboard/threads/${t.id}`}
+              onClick={onClose}
               className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs transition-all"
               style={{
                 background: active ? '#800020' : 'transparent',
@@ -213,6 +233,7 @@ export function ThreadSidebar({ threads, currentId, novaThreadHref }: ThreadSide
                   <Link
                     key={p.id}
                     href={`/dashboard/threads/${p.thread_id}`}
+                    onClick={onClose}
                     className="flex flex-col gap-0.5 px-3 py-2 rounded-lg transition-all hover:opacity-80"
                     style={{ background: 'rgba(128,0,32,0.04)' }}
                   >
@@ -234,5 +255,98 @@ export function ThreadSidebar({ threads, currentId, novaThreadHref }: ThreadSide
         )}
       </nav>
     </div>
+  )
+}
+
+export function ThreadSidebar({ threads, currentId, novaThreadHref }: ThreadSidebarProps) {
+  const [mobileOpen, setMobileOpen] = useState(false)
+
+  // Swipe right from left edge to open; swipe left to close
+  useEffect(() => {
+    let startX = 0
+    let startY = 0
+
+    const onTouchStart = (e: TouchEvent) => {
+      startX = e.touches[0].clientX
+      startY = e.touches[0].clientY
+    }
+
+    const onTouchEnd = (e: TouchEvent) => {
+      const dx = e.changedTouches[0].clientX - startX
+      const dy = Math.abs(e.changedTouches[0].clientY - startY)
+      if (dy > 60) return // mostly vertical — ignore
+
+      if (!mobileOpen && startX < 40 && dx > 60) {
+        setMobileOpen(true)
+      } else if (mobileOpen && dx < -60) {
+        setMobileOpen(false)
+      }
+    }
+
+    document.addEventListener('touchstart', onTouchStart, { passive: true })
+    document.addEventListener('touchend', onTouchEnd, { passive: true })
+    return () => {
+      document.removeEventListener('touchstart', onTouchStart)
+      document.removeEventListener('touchend', onTouchEnd)
+    }
+  }, [mobileOpen])
+
+  // Lock body scroll when mobile sidebar is open
+  useEffect(() => {
+    if (mobileOpen) {
+      document.body.style.overflow = 'hidden'
+    } else {
+      document.body.style.overflow = ''
+    }
+    return () => { document.body.style.overflow = '' }
+  }, [mobileOpen])
+
+  return (
+    <>
+      {/* Desktop sidebar */}
+      <div
+        className="hidden md:flex w-56 flex-shrink-0 flex-col overflow-hidden"
+        style={{
+          background: 'rgba(255,255,255,0.28)',
+          borderRight: '0.5px solid rgba(128,0,32,0.10)',
+        }}
+      >
+        <SidebarContent
+          threads={threads}
+          currentId={currentId}
+          novaThreadHref={novaThreadHref}
+        />
+      </div>
+
+      {/* Mobile overlay */}
+      {mobileOpen && (
+        <div className="md:hidden fixed inset-0 z-50 flex">
+          {/* Sidebar panel */}
+          <div
+            className="w-64 h-full flex flex-col"
+            style={{
+              background: 'rgba(247,240,243,0.97)',
+              borderRight: '0.5px solid rgba(128,0,32,0.10)',
+              backdropFilter: 'blur(12px)',
+              WebkitBackdropFilter: 'blur(12px)',
+              paddingTop: 'env(safe-area-inset-top)',
+            }}
+          >
+            <SidebarContent
+              threads={threads}
+              currentId={currentId}
+              novaThreadHref={novaThreadHref}
+              onClose={() => setMobileOpen(false)}
+            />
+          </div>
+          {/* Backdrop */}
+          <div
+            className="flex-1"
+            style={{ background: 'rgba(46,5,16,0.35)' }}
+            onClick={() => setMobileOpen(false)}
+          />
+        </div>
+      )}
+    </>
   )
 }
