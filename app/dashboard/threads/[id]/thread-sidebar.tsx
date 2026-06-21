@@ -261,32 +261,50 @@ function SidebarContent({
 export function ThreadSidebar({ threads, currentId, novaThreadHref }: ThreadSidebarProps) {
   const [mobileOpen, setMobileOpen] = useState(false)
 
+  // Listen for open event fired by the header button
+  useEffect(() => {
+    const handler = () => setMobileOpen(true)
+    window.addEventListener('open-thread-sidebar', handler)
+    return () => window.removeEventListener('open-thread-sidebar', handler)
+  }, [])
+
   // Swipe right from left edge to open; swipe left to close
+  // Non-passive so we can preventDefault and block iOS native back gesture
   useEffect(() => {
     let startX = 0
     let startY = 0
+    let maybeSwipe = false
 
     const onTouchStart = (e: TouchEvent) => {
       startX = e.touches[0].clientX
       startY = e.touches[0].clientY
+      maybeSwipe = startX < 40
+      // Claim the touch early so iOS doesn't treat it as a back swipe
+      if (maybeSwipe && !mobileOpen) e.preventDefault()
+    }
+
+    const onTouchMove = (e: TouchEvent) => {
+      if (maybeSwipe && !mobileOpen) e.preventDefault()
     }
 
     const onTouchEnd = (e: TouchEvent) => {
       const dx = e.changedTouches[0].clientX - startX
       const dy = Math.abs(e.changedTouches[0].clientY - startY)
-      if (dy > 60) return // mostly vertical — ignore
+      if (dy > 60) return
 
-      if (!mobileOpen && startX < 40 && dx > 60) {
+      if (!mobileOpen && maybeSwipe && dx > 60) {
         setMobileOpen(true)
       } else if (mobileOpen && dx < -60) {
         setMobileOpen(false)
       }
     }
 
-    document.addEventListener('touchstart', onTouchStart, { passive: true })
+    document.addEventListener('touchstart', onTouchStart, { passive: false })
+    document.addEventListener('touchmove', onTouchMove, { passive: false })
     document.addEventListener('touchend', onTouchEnd, { passive: true })
     return () => {
       document.removeEventListener('touchstart', onTouchStart)
+      document.removeEventListener('touchmove', onTouchMove)
       document.removeEventListener('touchend', onTouchEnd)
     }
   }, [mobileOpen])

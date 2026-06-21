@@ -1,12 +1,13 @@
 import { createClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
-import { Tag, Hash, Pencil, CalendarDays, ArrowLeft } from 'lucide-react'
+import { Tag, Hash, Pencil, CalendarDays } from 'lucide-react'
 import { PostForm } from './post-form'
 import { PostsList } from './posts-list'
 import { CenaForm } from './cena-form'
 import { ThreadHistory } from './thread-history'
 import { ThreadSidebar } from './thread-sidebar'
+import { OpenSidebarButton } from './open-sidebar-button'
 
 export default async function ThreadPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -85,18 +86,11 @@ export default async function ThreadPage({ params }: { params: Promise<{ id: str
 
         {/* Header mobile */}
         <div
-          className="md:hidden flex-shrink-0 flex items-center gap-3 px-4"
+          className="md:hidden flex-shrink-0 flex items-center gap-2 px-4"
           style={{ paddingTop: 52, paddingBottom: 14, borderBottom: '0.5px solid rgba(128,0,32,0.08)' }}
         >
-          <Link
-            href={thread.universo_id ? `/dashboard/universos/${thread.universo_id}` : '/dashboard'}
-            className="flex-shrink-0 p-1 -ml-1 rounded-lg hover:opacity-70 transition-opacity"
-            style={{ color: '#2E0510' }}
-          >
-            <ArrowLeft size={20} />
-          </Link>
           <Hash size={13} style={{ color: '#906070', flexShrink: 0 }} />
-          <span className="text-sm font-medium truncate" style={{ color: '#2E0510' }}>{thread.titulo}</span>
+          <OpenSidebarButton titulo={thread.titulo} />
           <Link
             href={`/dashboard/threads/${id}/editar`}
             className="ml-auto flex-shrink-0 p-1 rounded-lg hover:opacity-70 transition-opacity"
