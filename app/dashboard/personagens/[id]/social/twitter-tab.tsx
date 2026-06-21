@@ -234,8 +234,8 @@ export function TwitterTab({
             const postComentarios = comentarios.filter(c => c.post_id === post.id)
             const jaCurtiu = actingAs ? postCurtidas.some(c => c.personagem_id === actingAs.id) : false
             const comentariosAbertos = openComentsId === post.id
-            const hora = new Date(post.data_post || post.created_at).toLocaleString('pt-BR', {
-              day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit',
+            const hora = new Date(post.data_post || post.created_at).toLocaleDateString('pt-BR', {
+              day: '2-digit', month: '2-digit', year: '2-digit',
             })
             const isEditing = editingId === post.id
             const totalCurtidas = postCurtidas.length + eng.curtidas
@@ -291,12 +291,6 @@ export function TwitterTab({
                           <Heart size={14} fill={jaCurtiu ? '#800020' : 'none'} stroke={jaCurtiu ? '#800020' : '#B09098'} />
                           <span className="text-xs" style={{ color: jaCurtiu ? '#800020' : '#B09098' }}>{totalCurtidas}</span>
                         </button>
-                        <EditableNum value={eng.curtidas}
-                          icon={<Heart size={13} style={{ color: '#B09098' }} />}
-                          onSave={v => updateEngagement(post.id, 'curtidas', v)} />
-                        <EditableNum value={eng.comentarios}
-                          icon={<MessageCircle size={13} style={{ color: '#B09098' }} />}
-                          onSave={v => updateEngagement(post.id, 'comentarios', v)} />
                       </div>
                     )}
 
