@@ -248,7 +248,7 @@ export function TwitterTab({
                   <AccountAvatar conta={currentConta} personagem={personagem} size={36} />
                   <div className="flex-1 min-w-0">
                     <div className="flex items-baseline gap-2 mb-1">
-                      <span className="text-sm font-semibold" style={{ color: '#2E0510' }}>{personagem.nome}</span>
+                      <span className="text-xs font-semibold" style={{ color: '#2E0510' }}>{personagem.nome}</span>
                       <span className="text-xs" style={{ color: '#B09098' }}>{handle}</span>
                       <span className="text-xs" style={{ color: '#B09098' }}>· {hora}</span>
                     </div>
