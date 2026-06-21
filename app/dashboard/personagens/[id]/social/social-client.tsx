@@ -238,7 +238,7 @@ export function SocialClient({
               }
             </div>
             <div>
-              <h1 className="text-xs font-semibold leading-tight" style={{ color: '#2E0510' }}>{personagem.nome}</h1>
+              <p className="text-xs font-semibold leading-tight" style={{ color: '#2E0510' }}>{personagem.nome}</p>
               <p className="text-xs mt-0.5" style={{ color: '#906070' }}>{handle}</p>
             </div>
           </div>
