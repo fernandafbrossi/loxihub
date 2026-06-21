@@ -1,4 +1,4 @@
-const CACHE = 'loxihub-v1';
+const CACHE = 'loxihub-v2';
 
 self.addEventListener('install', (e) => {
   self.skipWaiting();
@@ -12,6 +12,31 @@ self.addEventListener('activate', (e) => {
     ).then(() => self.clients.claim())
   );
 });
+
+// ── Push notifications ──
+self.addEventListener('push', (e) => {
+  const data = e.data?.json() ?? {}
+  e.waitUntil(
+    self.registration.showNotification(data.title ?? 'LoxiHub', {
+      body: data.body,
+      icon: '/icon-192.png',
+      badge: '/icon-96.png',
+      data: { url: data.url ?? '/' },
+    })
+  )
+})
+
+self.addEventListener('notificationclick', (e) => {
+  e.notification.close()
+  e.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then(list => {
+      const target = e.notification.data?.url ?? '/'
+      const existing = list.find(c => c.url.includes(self.location.origin))
+      if (existing) { existing.focus(); existing.navigate(target) }
+      else clients.openWindow(target)
+    })
+  )
+})
 
 self.addEventListener('fetch', (e) => {
   const url = new URL(e.request.url);
