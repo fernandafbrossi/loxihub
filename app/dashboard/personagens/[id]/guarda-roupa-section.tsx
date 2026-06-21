@@ -63,7 +63,7 @@ function OutfitThumb({ roupa, onOpen, onDelete }: {
         </div>
         <button
           onClick={() => onDelete(roupa.id)}
-          className="absolute top-1 right-1 w-5 h-5 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow"
+          className="absolute top-1 right-1 w-5 h-5 rounded-full flex items-center justify-center opacity-90 md:opacity-0 md:group-hover:opacity-100 transition-opacity shadow"
           style={{ background: 'rgba(46,5,16,0.80)' }}
         >
           <X size={9} color="#FAF0F2" />

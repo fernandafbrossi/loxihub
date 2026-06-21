@@ -331,7 +331,7 @@ export function InstagramTab({
                           <span className="text-[11px]" style={{ color: '#2E0510' }}>{c.conteudo}</span>
                         </div>
                         <button onClick={() => deletarComentario(c.id)}
-                          className="opacity-0 group-hover:opacity-100 flex-shrink-0 transition-opacity p-0.5 hover:opacity-60"
+                          className="opacity-60 md:opacity-0 md:group-hover:opacity-100 flex-shrink-0 transition-opacity p-0.5 hover:opacity-60"
                           style={{ color: '#B09098' }}><Trash2 size={11} /></button>
                       </div>
                     )

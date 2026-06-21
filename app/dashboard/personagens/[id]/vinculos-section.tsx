@@ -207,7 +207,7 @@ export function VinculosSection({ personagemId, vinculosIniciais, todosPersonage
               </Link>
               <button
                 onClick={() => remover(v.id)}
-                className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full flex items-center justify-center opacity-90 md:opacity-0 md:group-hover:opacity-100 transition-opacity"
                 style={{ background: '#800020', color: '#FAF0F2', boxShadow: '0 1px 4px rgba(40,5,15,0.30)' }}
                 title="Remover vínculo"
               >

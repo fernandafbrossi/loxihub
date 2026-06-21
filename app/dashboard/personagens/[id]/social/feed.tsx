@@ -102,7 +102,7 @@ export function SocialFeed({ posts, personagem, userId }: Props) {
               <button
                 onClick={() => handleDelete(post.id)}
                 disabled={deletingId === post.id}
-                className="opacity-0 group-hover:opacity-100 transition-opacity p-1.5 rounded-lg hover:opacity-60 disabled:opacity-20"
+                className="opacity-60 md:opacity-0 md:group-hover:opacity-100 transition-opacity p-1.5 rounded-lg hover:opacity-60 disabled:opacity-20"
                 style={{ color: '#906070' }}
                 title="Excluir post"
               >

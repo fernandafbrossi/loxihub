@@ -189,7 +189,7 @@ function ContextoCard({ contexto, onOpenImage, onDelete }: {
             <button
               onClick={handleDelete}
               disabled={deleting}
-              className="opacity-0 group-hover:opacity-100 transition-opacity disabled:opacity-40"
+              className="opacity-60 md:opacity-0 md:group-hover:opacity-100 transition-opacity disabled:opacity-40"
               title="Apagar contexto"
             >
               <Trash2 size={11} style={{ color: '#B09098' }} />
@@ -372,14 +372,14 @@ export function PostsList({ items, userId, personagens, threadId }: PostsListPro
                       <>
                         <button
                           onClick={() => startEdit(post)}
-                          className="opacity-0 group-hover:opacity-100 transition-opacity ml-1"
+                          className="opacity-60 md:opacity-0 md:group-hover:opacity-100 transition-opacity ml-1"
                           title="Editar"
                         >
                           <Pencil size={11} style={{ color: '#906070' }} />
                         </button>
                         <button
                           onClick={() => handleDeletePost(post.id)}
-                          className="opacity-0 group-hover:opacity-100 transition-opacity"
+                          className="opacity-60 md:opacity-0 md:group-hover:opacity-100 transition-opacity"
                           title="Apagar post"
                         >
                           <Trash2 size={11} style={{ color: '#906070' }} />
