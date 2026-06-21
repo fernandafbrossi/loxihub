@@ -71,7 +71,7 @@ export default async function ThreadPage({ params }: { params: Promise<{ id: str
     : '/dashboard/threads/nova'
 
   return (
-    <div className="flex overflow-hidden" style={{ height: 'calc(100vh - 40px)' }}>
+    <div className="flex overflow-hidden h-[100dvh] md:h-[calc(100vh-40px)]">
 
       {/* ── Painel esquerdo: lista de capítulos ── */}
       <ThreadSidebar
