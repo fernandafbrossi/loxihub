@@ -9,19 +9,25 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
   if (!user) redirect('/login')
 
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('nome_display, avatar_url')
+    .eq('id', user.id)
+    .single()
+
   return (
     <div
       className="min-h-screen md:p-5 flex items-start justify-center"
-      style={{ background: 'linear-gradient(145deg, #B8A8B0 0%, #A898A2 50%, #B4A4AE 100%)' }}
+      style={{ background: 'var(--bg-page)' }}
     >
       <div
         className="flex w-full md:rounded-2xl overflow-hidden min-h-screen md:min-h-[calc(100vh-40px)]"
         style={{
-          background: 'linear-gradient(160deg, #F7F0F3 0%, #EDE4EA 100%)',
+          background: 'var(--bg-inner)',
           boxShadow: '0 8px 48px rgba(40,5,15,0.22), 0 2px 8px rgba(40,5,15,0.10)',
         }}
       >
-        <Sidebar userEmail={user.email} />
+        <Sidebar userEmail={user.email} displayName={profile?.nome_display} avatarUrl={profile?.avatar_url ?? undefined} />
         <main className="flex-1 overflow-auto">
           {children}
         </main>

@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { ScrollText, MapPin, Users, Home, LogOut, Menu, X, ArrowLeft, Smartphone, CalendarDays, PanelLeftClose, PanelLeftOpen, GitBranch, Lock } from 'lucide-react'
+import { ScrollText, MapPin, Users, Home, LogOut, Menu, X, ArrowLeft, Smartphone, CalendarDays, PanelLeftClose, PanelLeftOpen, GitBranch, Lock, Settings } from 'lucide-react'
 import { NotificationBell } from '@/components/notifications-bell'
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
@@ -13,9 +13,11 @@ const globalNav = [
 
 interface SidebarProps {
   userEmail?: string
+  displayName?: string
+  avatarUrl?: string
 }
 
-export function Sidebar({ userEmail }: SidebarProps) {
+export function Sidebar({ userEmail, displayName, avatarUrl }: SidebarProps) {
   const pathname = usePathname()
   const [mobileOpen, setMobileOpen] = useState(false)
   const [collapsed, setCollapsed] = useState(false)
@@ -26,7 +28,6 @@ export function Sidebar({ userEmail }: SidebarProps) {
   const universoMatch = pathname.match(/^\/dashboard\/universos\/([^/]+)/)
 
   useEffect(() => {
-    // 1. Tenta query param (?universo=)
     const params = new URLSearchParams(window.location.search)
     const fromQuery = params.get('universo')
     if (fromQuery) {
@@ -35,7 +36,6 @@ export function Sidebar({ userEmail }: SidebarProps) {
       return
     }
 
-    // 2. Tenta buscar universo_id do recurso atual (personagem, lugar, thread)
     const resourceMatch = pathname.match(
       /^\/dashboard\/(personagens|lugares|threads)\/([0-9a-f-]{36})/
     )
@@ -52,7 +52,6 @@ export function Sidebar({ userEmail }: SidebarProps) {
       return
     }
 
-    // 3. Fallback para páginas de conteúdo que não carregam ?universo= na URL
     const isContentPage = /^\/dashboard\/(personagens|lugares|threads|arvore|redes-sociais|linha-do-tempo|instagram|twitter)/.test(pathname)
     if (isContentPage) {
       const saved = sessionStorage.getItem('sidebarUniversoId')
@@ -93,28 +92,25 @@ export function Sidebar({ userEmail }: SidebarProps) {
     return pathname.startsWith(href.split('?')[0])
   }
 
-  const displayName = userEmail?.split('@')[0] ?? 'você'
+  const resolvedName = displayName || userEmail?.split('@')[0] || 'você'
   const navItems = universoId ? universoNav : globalNav
 
-  // ── Collapsed (icons only) ──
   const CollapsedSidebar = () => (
     <aside
       className="hidden md:flex flex-col items-center shrink-0 py-5 gap-4"
       style={{
         width: 52,
-        background: 'rgba(255,255,255,0.42)',
-        borderRight: '0.5px solid rgba(128,0,32,0.10)',
+        background: 'var(--surface)',
+        borderRight: '0.5px solid var(--p-10)',
         backdropFilter: 'blur(10px)',
         WebkitBackdropFilter: 'blur(10px)',
       }}
     >
-      {/* Dot logo */}
       <div
         className="w-2.5 h-2.5 rounded-full mb-2"
-        style={{ background: 'linear-gradient(135deg, #C9A96E, #A07840)', boxShadow: '0 0 0 3px rgba(201,169,110,0.20)' }}
+        style={{ background: 'var(--gold)', boxShadow: '0 0 0 3px var(--p-20)' }}
       />
 
-      {/* Nav icons */}
       <nav className="flex flex-col items-center gap-1 flex-1">
         {navItems.map(({ href, label, icon: Icon, exact }) => {
           const active = isActive(href, exact)
@@ -125,9 +121,9 @@ export function Sidebar({ userEmail }: SidebarProps) {
               title={label}
               className="w-9 h-9 flex items-center justify-center rounded-lg transition-all"
               style={{
-                background: active ? 'linear-gradient(135deg, #800020 0%, #A0002A 100%)' : 'transparent',
-                color: active ? '#FAF0F2' : '#906070',
-                boxShadow: active ? '0 3px 14px rgba(128,0,32,0.42), inset 0 1px 0 rgba(255,255,255,0.12)' : 'none',
+                background: active ? 'var(--primary)' : 'transparent',
+                color: active ? 'var(--primary-foreground)' : 'var(--foreground-muted)',
+                boxShadow: active ? '0 3px 14px var(--p-42), inset 0 1px 0 rgba(255,255,255,0.12)' : 'none',
               }}
             >
               <Icon size={16} />
@@ -136,14 +132,13 @@ export function Sidebar({ userEmail }: SidebarProps) {
         })}
       </nav>
 
-      {/* Notifications + expand */}
       <div className="flex flex-col items-center gap-2">
         <NotificationBell placement="right" />
         <button
           onClick={() => setCollapsed(false)}
           title="Expandir menu"
           className="w-9 h-9 flex items-center justify-center rounded-lg hover:opacity-70 transition-opacity"
-          style={{ color: '#906070' }}
+          style={{ color: 'var(--foreground-muted)' }}
         >
           <PanelLeftOpen size={15} />
         </button>
@@ -154,23 +149,22 @@ export function Sidebar({ userEmail }: SidebarProps) {
   const SidebarContent = () => (
     <div className="flex flex-col h-full">
 
-      {/* Logo / contexto */}
       <div className="px-5 pt-6 pb-5">
         {universoId ? (
           <div>
             <Link
               href="/dashboard"
               className="inline-flex items-center gap-1 text-[10px] mb-3 hover:opacity-70 transition-opacity"
-              style={{ color: '#906070' }}
+              style={{ color: 'var(--foreground-muted)' }}
             >
               <ArrowLeft size={11} /> Universos
             </Link>
             <div className="flex items-center gap-2">
               <div
                 className="w-2.5 h-2.5 rounded-full flex-shrink-0"
-                style={{ background: '#800020', boxShadow: '0 0 0 3px rgba(128,0,32,0.15)' }}
+                style={{ background: 'var(--primary)', boxShadow: '0 0 0 3px var(--p-15)' }}
               />
-              <span className="text-sm font-medium leading-tight" style={{ color: '#2E0510' }}>
+              <span className="text-sm font-medium leading-tight" style={{ color: 'var(--foreground)' }}>
                 {universoNome ?? '...'}
               </span>
             </div>
@@ -180,9 +174,9 @@ export function Sidebar({ userEmail }: SidebarProps) {
             <div className="flex items-center gap-2.5">
               <div
                 className="w-2.5 h-2.5 rounded-full flex-shrink-0"
-                style={{ background: 'linear-gradient(135deg, #C9A96E, #A07840)', boxShadow: '0 0 0 3px rgba(201,169,110,0.20)' }}
+                style={{ background: 'var(--gold)', boxShadow: '0 0 0 3px var(--p-20)' }}
               />
-              <span className="text-base font-medium tracking-tight" style={{ color: '#2E0510', fontFamily: 'var(--font-serif)' }}>
+              <span className="text-base font-medium tracking-tight" style={{ color: 'var(--foreground)', fontFamily: 'var(--font-serif)' }}>
                 LoxiHub
               </span>
             </div>
@@ -190,7 +184,7 @@ export function Sidebar({ userEmail }: SidebarProps) {
               onClick={() => setCollapsed(true)}
               title="Recolher menu"
               className="hover:opacity-60 transition-opacity"
-              style={{ color: '#B09098' }}
+              style={{ color: 'var(--foreground-muted)' }}
             >
               <PanelLeftClose size={14} />
             </button>
@@ -198,9 +192,8 @@ export function Sidebar({ userEmail }: SidebarProps) {
         )}
       </div>
 
-      {/* Nav */}
       <nav className="flex-1 px-3 flex flex-col gap-0.5">
-        <p className="text-[9px] font-medium uppercase tracking-widest px-2 mb-1" style={{ color: '#B09098' }}>
+        <p className="text-[9px] font-medium uppercase tracking-widest px-2 mb-1" style={{ color: 'var(--foreground-muted)' }}>
           {universoId ? 'Universo' : 'Menu'}
         </p>
         {navItems.map(({ href, label, icon: Icon, exact }) => {
@@ -212,9 +205,9 @@ export function Sidebar({ userEmail }: SidebarProps) {
               onClick={() => setMobileOpen(false)}
               className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-all"
               style={{
-                background: active ? 'linear-gradient(135deg, #800020 0%, #A0002A 100%)' : 'transparent',
-                color: active ? '#FAF0F2' : '#906070',
-                boxShadow: active ? '0 3px 14px rgba(128,0,32,0.42), inset 0 1px 0 rgba(255,255,255,0.12)' : 'none',
+                background: active ? 'var(--primary)' : 'transparent',
+                color: active ? 'var(--primary-foreground)' : 'var(--foreground-muted)',
+                boxShadow: active ? '0 3px 14px var(--p-42), inset 0 1px 0 rgba(255,255,255,0.12)' : 'none',
               }}
             >
               <Icon size={15} />
@@ -224,36 +217,49 @@ export function Sidebar({ userEmail }: SidebarProps) {
         })}
       </nav>
 
-      {/* Footer */}
       <div
         className="px-3 py-4 mx-3 mb-4 rounded-xl"
-        style={{ background: 'rgba(128,0,32,0.06)', border: '0.5px solid rgba(128,0,32,0.10)' }}
+        style={{ background: 'var(--p-06)', border: '0.5px solid var(--p-10)' }}
       >
         <div className="flex items-center gap-2.5 mb-3">
           <div
-            className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-medium flex-shrink-0"
+            className="w-7 h-7 rounded-full overflow-hidden flex items-center justify-center text-xs font-medium flex-shrink-0"
             style={{
-              background: 'linear-gradient(135deg, #800020, #5C0018)',
-              color: '#FAF0F2',
-              boxShadow: '0 1px 6px rgba(40,5,15,0.22)',
+              background: 'var(--primary)',
+              color: 'var(--primary-foreground)',
+              boxShadow: '0 1px 6px var(--p-22)',
             }}
           >
-            {displayName[0].toUpperCase()}
+            {avatarUrl
+              ? <img src={avatarUrl} alt="" className="w-full h-full object-cover" />
+              : resolvedName[0].toUpperCase()
+            }
           </div>
           <div className="min-w-0 flex-1">
-            <p className="text-xs font-medium truncate" style={{ color: '#2E0510' }}>{displayName}</p>
-            <p className="text-[10px]" style={{ color: '#906070' }}>online</p>
+            <p className="text-xs font-medium truncate" style={{ color: 'var(--foreground)' }}>{resolvedName}</p>
+            <p className="text-[10px]" style={{ color: 'var(--foreground-muted)' }}>online</p>
           </div>
           <NotificationBell placement="up" />
         </div>
-        <button
-          onClick={handleLogout}
-          className="flex items-center gap-2 text-[11px] w-full px-1 py-1 rounded transition-opacity hover:opacity-70"
-          style={{ color: '#906070' }}
-        >
-          <LogOut size={13} />
-          Sair
-        </button>
+        <div className="flex flex-col gap-0.5">
+          <Link
+            href="/dashboard/configuracoes"
+            onClick={() => setMobileOpen(false)}
+            className="flex items-center gap-2 text-[11px] w-full px-1 py-1 rounded transition-opacity hover:opacity-70"
+            style={{ color: 'var(--foreground-muted)' }}
+          >
+            <Settings size={13} />
+            Configurações
+          </Link>
+          <button
+            onClick={handleLogout}
+            className="flex items-center gap-2 text-[11px] w-full px-1 py-1 rounded transition-opacity hover:opacity-70"
+            style={{ color: 'var(--foreground-muted)' }}
+          >
+            <LogOut size={13} />
+            Sair
+          </button>
+        </div>
       </div>
     </div>
   )
@@ -262,12 +268,11 @@ export function Sidebar({ userEmail }: SidebarProps) {
 
   return (
     <>
-      {/* Desktop */}
       <aside
         className="hidden md:flex flex-col w-52 shrink-0"
         style={{
-          background: 'rgba(255,255,255,0.42)',
-          borderRight: '0.5px solid rgba(128,0,32,0.10)',
+          background: 'var(--surface)',
+          borderRight: '0.5px solid var(--p-10)',
           backdropFilter: 'blur(10px)',
           WebkitBackdropFilter: 'blur(10px)',
         }}
@@ -275,35 +280,33 @@ export function Sidebar({ userEmail }: SidebarProps) {
         <SidebarContent />
       </aside>
 
-      {/* Mobile top bar */}
       <div
         className="md:hidden fixed top-0 left-0 right-0 z-40 flex items-center justify-between px-4 py-3"
         style={{
           background: 'rgba(247,240,243,0.90)',
-          borderBottom: '0.5px solid rgba(128,0,32,0.10)',
+          borderBottom: '0.5px solid var(--p-10)',
           backdropFilter: 'blur(10px)',
           WebkitBackdropFilter: 'blur(10px)',
         }}
       >
         <div className="flex items-center gap-2">
-          <div className="w-2 h-2 rounded-full" style={{ background: '#800020', boxShadow: '0 0 0 2px rgba(128,0,32,0.15)' }} />
-          <span className="text-sm font-medium" style={{ color: '#2E0510' }}>
+          <div className="w-2 h-2 rounded-full" style={{ background: 'var(--primary)', boxShadow: '0 0 0 2px var(--p-15)' }} />
+          <span className="text-sm font-medium" style={{ color: 'var(--foreground)' }}>
             {universoNome ?? 'LoxiHub'}
           </span>
         </div>
-        <button onClick={() => setMobileOpen(!mobileOpen)} style={{ color: '#2E0510' }}>
+        <button onClick={() => setMobileOpen(!mobileOpen)} style={{ color: 'var(--foreground)' }}>
           {mobileOpen ? <X size={20} /> : <Menu size={20} />}
         </button>
       </div>
 
-      {/* Mobile drawer */}
       {mobileOpen && (
         <div className="md:hidden fixed inset-0 z-30 flex">
           <div
             className="w-60 min-h-screen"
             style={{
               background: 'rgba(247,240,243,0.95)',
-              borderRight: '0.5px solid rgba(128,0,32,0.10)',
+              borderRight: '0.5px solid var(--p-10)',
               backdropFilter: 'blur(12px)',
               WebkitBackdropFilter: 'blur(12px)',
             }}
