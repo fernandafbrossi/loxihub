@@ -152,13 +152,23 @@ export function Sidebar({ userEmail, displayName, avatarUrl }: SidebarProps) {
       <div className="px-5 pt-6 pb-5">
         {universoId ? (
           <div>
-            <Link
-              href="/dashboard"
-              className="inline-flex items-center gap-1 text-[10px] mb-3 hover:opacity-70 transition-opacity"
-              style={{ color: 'var(--foreground-muted)' }}
-            >
-              <ArrowLeft size={11} /> Universos
-            </Link>
+            <div className="flex items-center justify-between mb-3">
+              <Link
+                href="/dashboard"
+                className="inline-flex items-center gap-1 text-[10px] hover:opacity-70 transition-opacity"
+                style={{ color: 'var(--foreground-muted)' }}
+              >
+                <ArrowLeft size={11} /> Universos
+              </Link>
+              <button
+                onClick={() => setCollapsed(true)}
+                title="Recolher menu"
+                className="hover:opacity-60 transition-opacity"
+                style={{ color: 'var(--foreground-muted)' }}
+              >
+                <PanelLeftClose size={14} />
+              </button>
+            </div>
             <div className="flex items-center gap-2">
               <div
                 className="w-2.5 h-2.5 rounded-full flex-shrink-0"
