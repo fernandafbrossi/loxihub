@@ -38,16 +38,16 @@ function useDebounce(value: string, delay: number) {
 
 function Snippet({ text, query }: { text: string; query: string }) {
   const idx = text.toLowerCase().indexOf(query.toLowerCase())
-  if (idx === -1) return <span className="text-[10px]" style={{ color: '#B09098' }}>{text.slice(0, 60)}…</span>
+  if (idx === -1) return <span className="text-[10px]" style={{ color: 'var(--muted-light)' }}>{text.slice(0, 60)}…</span>
   const start = Math.max(0, idx - 20)
   const end = Math.min(text.length, idx + query.length + 40)
   const before = text.slice(start, idx)
   const match = text.slice(idx, idx + query.length)
   const after = text.slice(idx + query.length, end)
   return (
-    <span className="text-[10px]" style={{ color: '#B09098' }}>
+    <span className="text-[10px]" style={{ color: 'var(--muted-light)' }}>
       {start > 0 && '…'}{before}
-      <mark style={{ background: 'rgba(128,0,32,0.18)', color: '#800020', borderRadius: 2 }}>{match}</mark>
+      <mark style={{ background: 'var(--p-18)', color: 'var(--primary)', borderRadius: 2 }}>{match}</mark>
       {after}{end < text.length && '…'}
     </span>
   )
@@ -58,13 +58,14 @@ function SidebarContent({
   currentId,
   novaThreadHref,
   onClose,
+  onCollapse,
 }: {
   threads: Thread[]
   currentId: string
   novaThreadHref: string
   onClose?: () => void
+  onCollapse?: () => void
 }) {
-  const [collapsed, setCollapsed] = useState(false)
   const [query, setQuery] = useState('')
   const [postResults, setPostResults] = useState<PostResult[]>([])
   const [searching, setSearching] = useState(false)
@@ -104,55 +105,35 @@ function SidebarContent({
 
   const hasQuery = query.trim().length >= 2
 
-  if (collapsed) {
-    return (
-      <div
-        className="hidden md:flex flex-shrink-0 flex-col items-center pt-4 gap-3"
-        style={{
-          width: 40,
-          background: 'rgba(255,255,255,0.28)',
-          borderRight: '0.5px solid rgba(128,0,32,0.10)',
-        }}
-      >
-        <button
-          onClick={() => setCollapsed(false)}
-          title="Expandir capítulos"
-          className="hover:opacity-70 transition-opacity"
-          style={{ color: '#906070' }}
-        >
-          <PanelLeftOpen size={16} />
-        </button>
-      </div>
-    )
-  }
-
   return (
     <div className="flex flex-col h-full overflow-hidden">
       {/* Header */}
       <div className="px-4 pt-5 pb-2 flex items-center justify-between flex-shrink-0">
-        <p className="text-[9px] font-medium uppercase tracking-widest" style={{ color: '#B09098' }}>
+        <p className="text-[9px] font-medium uppercase tracking-widest" style={{ color: 'var(--muted-light)' }}>
           Capítulos
         </p>
         <div className="flex items-center gap-1.5">
           <Link href={novaThreadHref} title="Nova thread" onClick={onClose}>
-            <Plus size={13} style={{ color: '#906070' }} className="hover:opacity-70 transition-opacity" />
+            <Plus size={13} style={{ color: 'var(--foreground-muted)' }} className="hover:opacity-70 transition-opacity" />
           </Link>
           {/* Desktop collapse */}
-          <button
-            onClick={() => setCollapsed(true)}
-            title="Minimizar"
-            className="hidden md:block hover:opacity-70 transition-opacity"
-            style={{ color: '#906070' }}
-          >
-            <PanelLeftClose size={13} />
-          </button>
+          {onCollapse && (
+            <button
+              onClick={onCollapse}
+              title="Minimizar"
+              className="hidden md:block hover:opacity-70 transition-opacity"
+              style={{ color: 'var(--foreground-muted)' }}
+            >
+              <PanelLeftClose size={13} />
+            </button>
+          )}
           {/* Mobile close */}
           {onClose && (
             <button
               onClick={onClose}
               title="Fechar"
               className="md:hidden hover:opacity-70 transition-opacity"
-              style={{ color: '#906070' }}
+              style={{ color: 'var(--foreground-muted)' }}
             >
               <X size={15} />
             </button>
@@ -163,7 +144,7 @@ function SidebarContent({
       {/* Search */}
       <div className="px-3 pb-2 flex-shrink-0">
         <div className="relative">
-          <Search size={11} className="absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: '#B09098' }} />
+          <Search size={11} className="absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: 'var(--muted-light)' }} />
           <input
             type="text"
             value={query}
@@ -171,16 +152,16 @@ function SidebarContent({
             placeholder="Buscar em tudo..."
             className="w-full pl-7 pr-6 py-1.5 rounded-lg text-[11px] outline-none"
             style={{
-              background: 'rgba(255,255,255,0.55)',
-              border: '0.5px solid rgba(128,0,32,0.12)',
-              color: '#2E0510',
+              background: 'var(--input)',
+              border: '0.5px solid var(--p-12)',
+              color: 'var(--foreground)',
             }}
           />
           {query && (
             <button
               onClick={() => setQuery('')}
               className="absolute right-2 top-1/2 -translate-y-1/2 hover:opacity-70 transition-opacity"
-              style={{ color: '#B09098' }}
+              style={{ color: 'var(--muted-light)' }}
             >
               <X size={10} />
             </button>
@@ -191,7 +172,7 @@ function SidebarContent({
       {/* Thread list */}
       <nav className="flex-1 overflow-y-auto px-2 pb-4 flex flex-col gap-0.5">
         {filteredThreads.length === 0 && !hasQuery && (
-          <p className="text-[10px] px-3 py-2" style={{ color: '#B09098' }}>
+          <p className="text-[10px] px-3 py-2" style={{ color: 'var(--muted-light)' }}>
             Nenhuma thread encontrada.
           </p>
         )}
@@ -204,9 +185,9 @@ function SidebarContent({
               onClick={onClose}
               className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs transition-all"
               style={{
-                background: active ? '#800020' : 'transparent',
-                color: active ? '#FAF0F2' : '#906070',
-                boxShadow: active ? '0 2px 10px rgba(128,0,32,0.30)' : 'none',
+                background: active ? 'var(--primary)' : 'transparent',
+                color: active ? 'var(--primary-foreground)' : 'var(--foreground-muted)',
+                boxShadow: active ? '0 2px 10px var(--p-30)' : 'none',
                 fontWeight: active ? 500 : 400,
               }}
             >
@@ -219,14 +200,14 @@ function SidebarContent({
         {hasQuery && (
           <>
             {searching && (
-              <p className="text-[10px] px-3 py-2" style={{ color: '#B09098' }}>Buscando posts...</p>
+              <p className="text-[10px] px-3 py-2" style={{ color: 'var(--muted-light)' }}>Buscando posts...</p>
             )}
             {!searching && postResults.length === 0 && filteredThreads.length === 0 && (
-              <p className="text-[10px] px-3 py-2" style={{ color: '#B09098' }}>Nenhum resultado encontrado.</p>
+              <p className="text-[10px] px-3 py-2" style={{ color: 'var(--muted-light)' }}>Nenhum resultado encontrado.</p>
             )}
             {!searching && postResults.length > 0 && (
               <>
-                <p className="text-[9px] font-medium uppercase tracking-widest px-3 pt-3 pb-1" style={{ color: '#B09098' }}>
+                <p className="text-[9px] font-medium uppercase tracking-widest px-3 pt-3 pb-1" style={{ color: 'var(--muted-light)' }}>
                   Posts ({postResults.length})
                 </p>
                 {postResults.map(p => (
@@ -235,16 +216,16 @@ function SidebarContent({
                     href={`/dashboard/threads/${p.thread_id}`}
                     onClick={onClose}
                     className="flex flex-col gap-0.5 px-3 py-2 rounded-lg transition-all hover:opacity-80"
-                    style={{ background: 'rgba(128,0,32,0.04)' }}
+                    style={{ background: 'var(--p-04)' }}
                   >
                     <div className="flex items-center gap-1.5">
-                      <ScrollText size={9} style={{ color: '#906070', flexShrink: 0 }} />
-                      <span className="text-[10px] font-medium truncate" style={{ color: '#800020' }}>
+                      <ScrollText size={9} style={{ color: 'var(--foreground-muted)', flexShrink: 0 }} />
+                      <span className="text-[10px] font-medium truncate" style={{ color: 'var(--primary)' }}>
                         {p.thread_titulo}
                       </span>
                     </div>
                     {p.personagem_pov && (
-                      <span className="text-[9px]" style={{ color: '#906070' }}>{p.personagem_pov}</span>
+                      <span className="text-[9px]" style={{ color: 'var(--foreground-muted)' }}>{p.personagem_pov}</span>
                     )}
                     <Snippet text={p.conteudo} query={debouncedQuery} />
                   </Link>
@@ -260,6 +241,7 @@ function SidebarContent({
 
 export function ThreadSidebar({ threads, currentId, novaThreadHref }: ThreadSidebarProps) {
   const [mobileOpen, setMobileOpen] = useState(false)
+  const [collapsed, setCollapsed] = useState(false)
 
   // Listen for open event fired by the header button
   useEffect(() => {
@@ -322,19 +304,33 @@ export function ThreadSidebar({ threads, currentId, novaThreadHref }: ThreadSide
   return (
     <>
       {/* Desktop sidebar */}
-      <div
-        className="hidden md:flex w-56 flex-shrink-0 flex-col overflow-hidden"
-        style={{
-          background: 'rgba(255,255,255,0.28)',
-          borderRight: '0.5px solid rgba(128,0,32,0.10)',
-        }}
-      >
-        <SidebarContent
-          threads={threads}
-          currentId={currentId}
-          novaThreadHref={novaThreadHref}
-        />
-      </div>
+      {collapsed ? (
+        <div
+          className="hidden md:flex flex-shrink-0 flex-col items-center pt-4"
+          style={{ width: 40, background: 'var(--surface)', borderRight: '0.5px solid var(--p-10)' }}
+        >
+          <button
+            onClick={() => setCollapsed(false)}
+            title="Expandir capítulos"
+            className="hover:opacity-70 transition-opacity"
+            style={{ color: 'var(--foreground-muted)' }}
+          >
+            <PanelLeftOpen size={16} />
+          </button>
+        </div>
+      ) : (
+        <div
+          className="hidden md:flex w-56 flex-shrink-0 flex-col overflow-hidden"
+          style={{ background: 'var(--surface)', borderRight: '0.5px solid var(--p-10)' }}
+        >
+          <SidebarContent
+            threads={threads}
+            currentId={currentId}
+            novaThreadHref={novaThreadHref}
+            onCollapse={() => setCollapsed(true)}
+          />
+        </div>
+      )}
 
       {/* Mobile overlay */}
       {mobileOpen && (
@@ -343,8 +339,8 @@ export function ThreadSidebar({ threads, currentId, novaThreadHref }: ThreadSide
           <div
             className="w-64 h-full flex flex-col"
             style={{
-              background: 'rgba(247,240,243,0.97)',
-              borderRight: '0.5px solid rgba(128,0,32,0.10)',
+              background: 'var(--bg-inner)',
+              borderRight: '0.5px solid var(--p-10)',
               backdropFilter: 'blur(12px)',
               WebkitBackdropFilter: 'blur(12px)',
               paddingTop: 'env(safe-area-inset-top)',
@@ -360,7 +356,7 @@ export function ThreadSidebar({ threads, currentId, novaThreadHref }: ThreadSide
           {/* Backdrop */}
           <div
             className="flex-1"
-            style={{ background: 'rgba(46,5,16,0.35)' }}
+            style={{ background: 'var(--fg-40)' }}
             onClick={() => setMobileOpen(false)}
           />
         </div>
