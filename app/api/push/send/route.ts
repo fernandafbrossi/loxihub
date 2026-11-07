@@ -1,19 +1,26 @@
 import { NextRequest, NextResponse } from 'next/server'
 import webpush from 'web-push'
-import { createClient } from '@/lib/supabase/server'
-
-webpush.setVapidDetails(
-  'mailto:' + (process.env.VAPID_SUBJECT ?? 'fernandafaustinib@gmail.com'),
-  process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY ?? '',
-  process.env.VAPID_PRIVATE_KEY ?? ''
-)
+import { createClient } from '@supabase/supabase-js'
 
 export async function POST(req: NextRequest) {
   // Verifica o secret do webhook
   const secret = req.headers.get('x-webhook-secret')
-  if (secret !== process.env.PUSH_WEBHOOK_SECRET) {
+  if (!process.env.PUSH_WEBHOOK_SECRET || secret !== process.env.PUSH_WEBHOOK_SECRET) {
     return NextResponse.json({ error: 'forbidden' }, { status: 403 })
   }
+
+  // Configurado dentro do handler: chaves ausentes não derrubam o import da rota
+  const vapidPublic = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY
+  const vapidPrivate = process.env.VAPID_PRIVATE_KEY
+  if (!vapidPublic || !vapidPrivate) {
+    console.error('[push/send] chaves VAPID ausentes')
+    return NextResponse.json({ error: 'server_misconfigured' }, { status: 500 })
+  }
+  webpush.setVapidDetails(
+    'mailto:' + (process.env.VAPID_SUBJECT ?? 'fernandafaustinib@gmail.com'),
+    vapidPublic,
+    vapidPrivate
+  )
 
   const body = await req.json()
   // Supabase webhook envia { type, table, record, ... }
@@ -22,7 +29,15 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true })
   }
 
-  const supabase = await createClient()
+  // Webhook não tem sessão de usuária: precisa da service role para ler push_subscriptions (RLS)
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+  if (!serviceKey) {
+    console.error('[push/send] SUPABASE_SERVICE_ROLE_KEY ausente')
+    return NextResponse.json({ error: 'server_misconfigured' }, { status: 500 })
+  }
+  const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, serviceKey, {
+    auth: { persistSession: false },
+  })
   const { data: subs } = await supabase
     .from('push_subscriptions')
     .select('endpoint, p256dh, auth_key')

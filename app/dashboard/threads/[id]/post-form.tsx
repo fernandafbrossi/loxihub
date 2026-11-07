@@ -43,7 +43,7 @@ function Avatar({ p, size = 5 }: { p: { nome: string; foto_url: string | null };
         height: px,
         flexShrink: 0,
         background: 'linear-gradient(135deg, #800020, #5C0018)',
-        color: '#FAF0F2',
+        color: 'var(--primary-foreground)',
         fontSize: size <= 5 ? 9 : 11,
       }}
     >
@@ -54,7 +54,7 @@ function Avatar({ p, size = 5 }: { p: { nome: string; foto_url: string | null };
 
 function GroupLabel({ label }: { label: string }) {
   return (
-    <p className="px-3 pt-2 pb-1 text-[9px] font-medium uppercase tracking-widest" style={{ color: '#B09098' }}>
+    <p className="px-3 pt-2 pb-1 text-[9px] font-medium uppercase tracking-widest" style={{ color: 'var(--muted-light)' }}>
       {label}
     </p>
   )
@@ -136,12 +136,19 @@ export function PostForm({ threadId, personagemPrincipal, personagens }: PostFor
     const supabase = createClient()
     const { data: { user } } = await supabase.auth.getUser()
 
-    await supabase.from('posts').insert({
+    const { error } = await supabase.from('posts').insert({
       thread_id: threadId,
       conteudo: conteudo.trim(),
       personagem_pov: selectedPersonagem?.nome ?? null,
       criado_por: user?.id,
     })
+
+    if (error) {
+      // mantém o texto (rascunho) para não perder o post
+      setLoading(false)
+      alert('Não foi possível enviar o post. Tente novamente.')
+      return
+    }
 
     setConteudo('')
     localStorage.removeItem(DRAFT_KEY(threadId))
@@ -163,10 +170,10 @@ export function PostForm({ threadId, personagemPrincipal, personagens }: PostFor
         >
           {selectedPersonagem
             ? <Avatar p={selectedPersonagem} size={5} />
-            : <div className="w-5 h-5 rounded-full" style={{ background: 'rgba(128,0,32,0.15)' }} />
+            : <div className="w-5 h-5 rounded-full" style={{ background: 'var(--p-15)' }} />
           }
-          <span className="text-xs font-medium" style={{ color: '#2E0510' }}>{povNome}</span>
-          <ChevronDown size={11} style={{ color: '#906070' }} />
+          <span className="text-xs font-medium" style={{ color: 'var(--foreground)' }}>{povNome}</span>
+          <ChevronDown size={11} style={{ color: 'var(--foreground-muted)' }} />
         </button>
 
         {dropdownOpen && (
@@ -174,8 +181,8 @@ export function PostForm({ threadId, personagemPrincipal, personagens }: PostFor
             className="absolute bottom-full left-0 mb-1 z-20 rounded-xl overflow-hidden py-1"
             style={{
               background: 'rgba(255,255,255,0.97)',
-              border: '0.5px solid rgba(128,0,32,0.15)',
-              boxShadow: '0 8px 24px rgba(40,5,15,0.12)',
+              border: '0.5px solid var(--p-15)',
+              boxShadow: '0 8px 24px var(--fg-12)',
               minWidth: 200,
               maxHeight: 320,
               overflowY: 'auto',
@@ -191,10 +198,10 @@ export function PostForm({ threadId, personagemPrincipal, personagens }: PostFor
                     type="button"
                     onClick={() => selectPersonagem(p)}
                     className="flex items-center gap-2.5 w-full px-3 py-2 text-left transition-colors hover:opacity-80"
-                    style={{ background: selectedPersonagem?.id === p.id ? 'rgba(128,0,32,0.08)' : 'transparent' }}
+                    style={{ background: selectedPersonagem?.id === p.id ? 'var(--p-08)' : 'transparent' }}
                   >
                     <Avatar p={p} size={6} />
-                    <span className="text-xs font-medium" style={{ color: '#2E0510' }}>{p.nome}</span>
+                    <span className="text-xs font-medium" style={{ color: 'var(--foreground)' }}>{p.nome}</span>
                   </button>
                 ))}
               </>
@@ -203,7 +210,7 @@ export function PostForm({ threadId, personagemPrincipal, personagens }: PostFor
             {npcs.length > 0 && (
               <>
                 {principais.length > 0 && (
-                  <div style={{ height: 1, background: 'rgba(128,0,32,0.08)', margin: '4px 12px' }} />
+                  <div style={{ height: 1, background: 'var(--p-08)', margin: '4px 12px' }} />
                 )}
                 <GroupLabel label="NPCs" />
                 {npcs.map(p => (
@@ -212,17 +219,17 @@ export function PostForm({ threadId, personagemPrincipal, personagens }: PostFor
                     type="button"
                     onClick={() => selectPersonagem(p)}
                     className="flex items-center gap-2.5 w-full px-3 py-2 text-left transition-colors hover:opacity-80"
-                    style={{ background: selectedPersonagem?.id === p.id ? 'rgba(128,0,32,0.08)' : 'transparent' }}
+                    style={{ background: selectedPersonagem?.id === p.id ? 'var(--p-08)' : 'transparent' }}
                   >
                     <Avatar p={p} size={6} />
-                    <span className="text-xs" style={{ color: '#906070' }}>{p.nome}</span>
+                    <span className="text-xs" style={{ color: 'var(--foreground-muted)' }}>{p.nome}</span>
                   </button>
                 ))}
               </>
             )}
 
             {personagens.length === 0 && (
-              <p className="px-3 py-2 text-xs" style={{ color: '#906070' }}>
+              <p className="px-3 py-2 text-xs" style={{ color: 'var(--foreground-muted)' }}>
                 Nenhum personagem criado ainda.
               </p>
             )}
@@ -239,7 +246,7 @@ export function PostForm({ threadId, personagemPrincipal, personagens }: PostFor
             title={label}
             onClick={() => applyFormat(fmt)}
             className="p-2.5 md:p-1.5 rounded-md transition-opacity hover:opacity-70"
-            style={{ background: 'rgba(128,0,32,0.07)', color: '#800020' }}
+            style={{ background: 'var(--p-07)', color: 'var(--primary)' }}
           >
             <Icon size={14} />
           </button>
@@ -251,7 +258,7 @@ export function PostForm({ threadId, personagemPrincipal, personagens }: PostFor
         className="flex gap-2 items-end rounded-xl px-4 py-3"
         style={{
           background: 'rgba(255,255,255,0.65)',
-          border: '0.5px solid rgba(128,0,32,0.12)',
+          border: '0.5px solid var(--p-12)',
           boxShadow: '0 2px 12px rgba(40,5,15,0.05)',
         }}
       >
@@ -262,7 +269,7 @@ export function PostForm({ threadId, personagemPrincipal, personagens }: PostFor
             onChange={setConteudo}
             onSubmit={() => handleSubmit({ preventDefault: () => {} } as React.FormEvent)}
             placeholder={`Escreva como ${povNome}...`}
-            style={{ color: '#2E0510', fontSize: 14, lineHeight: '1.5' }}
+            style={{ color: 'var(--foreground)', fontSize: 14, lineHeight: '1.5' }}
           />
         </div>
 
@@ -270,13 +277,13 @@ export function PostForm({ threadId, personagemPrincipal, personagens }: PostFor
           type="submit"
           disabled={loading || !conteudo.trim()}
           className="flex-shrink-0 w-11 h-11 md:w-8 md:h-8 rounded-xl md:rounded-lg flex items-center justify-center disabled:opacity-30 transition-opacity hover:opacity-80"
-          style={{ background: '#800020', color: '#FAF0F2' }}
+          style={{ background: 'var(--btn-primary)', color: 'var(--primary-foreground)' }}
         >
           <Send size={15} />
         </button>
       </div>
 
-      <p className="hidden md:block text-[10px] mt-1.5 ml-1" style={{ color: '#B09098' }}>
+      <p className="hidden md:block text-[10px] mt-1.5 ml-1" style={{ color: 'var(--muted-light)' }}>
         Ctrl+Enter para enviar
       </p>
     </form>

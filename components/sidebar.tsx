@@ -2,13 +2,14 @@
 
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { ScrollText, MapPin, Users, Home, LogOut, Menu, X, ArrowLeft, Smartphone, CalendarDays, PanelLeftClose, PanelLeftOpen, GitBranch, Lock, Settings } from 'lucide-react'
+import { ScrollText, MapPin, Users, Home, LogOut, Menu, X, ArrowLeft, Smartphone, CalendarDays, PanelLeftClose, PanelLeftOpen, GitBranch, Lock, Settings, MessageCircle } from 'lucide-react'
 import { NotificationBell } from '@/components/notifications-bell'
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 
 const globalNav = [
   { href: '/dashboard', label: 'Início', icon: Home, exact: true },
+  { href: '/dashboard/mensagens', label: 'Mensagens', icon: MessageCircle },
 ]
 
 interface SidebarProps {
@@ -75,6 +76,7 @@ export function Sidebar({ userEmail, displayName, avatarUrl }: SidebarProps) {
     { href: `/dashboard/threads?universo=${universoId}`, label: 'Threads', icon: ScrollText },
     { href: `/dashboard/personagens?universo=${universoId}`, label: 'Personagens', icon: Users },
     { href: `/dashboard/lugares?universo=${universoId}`, label: 'Lugares', icon: MapPin },
+    { href: `/dashboard/mensagens?universo=${universoId}`, label: 'Mensagens', icon: MessageCircle },
     { href: `/dashboard/redes-sociais?universo=${universoId}`, label: 'Redes Sociais', icon: Smartphone },
     { href: `/dashboard/arvore?universo=${universoId}`, label: 'Vínculos', icon: GitBranch },
     { href: `/dashboard/linha-do-tempo?universo=${universoId}`, label: 'Linha do tempo', icon: CalendarDays },
@@ -95,7 +97,7 @@ export function Sidebar({ userEmail, displayName, avatarUrl }: SidebarProps) {
   const resolvedName = displayName || userEmail?.split('@')[0] || 'você'
   const navItems = universoId ? universoNav : globalNav
 
-  const CollapsedSidebar = () => (
+  const collapsedSidebar = (
     <aside
       className="hidden md:flex flex-col items-center shrink-0 py-5 gap-4"
       style={{
@@ -146,7 +148,7 @@ export function Sidebar({ userEmail, displayName, avatarUrl }: SidebarProps) {
     </aside>
   )
 
-  const SidebarContent = () => (
+  const sidebarContent = (
     <div className="flex flex-col h-full">
 
       <div className="px-5 pt-6 pb-5">
@@ -274,7 +276,7 @@ export function Sidebar({ userEmail, displayName, avatarUrl }: SidebarProps) {
     </div>
   )
 
-  if (collapsed) return <CollapsedSidebar />
+  if (collapsed) return collapsedSidebar
 
   return (
     <>
@@ -287,7 +289,7 @@ export function Sidebar({ userEmail, displayName, avatarUrl }: SidebarProps) {
           WebkitBackdropFilter: 'blur(10px)',
         }}
       >
-        <SidebarContent />
+        {sidebarContent}
       </aside>
 
       <div
@@ -321,7 +323,7 @@ export function Sidebar({ userEmail, displayName, avatarUrl }: SidebarProps) {
               WebkitBackdropFilter: 'blur(12px)',
             }}
           >
-            <div className="pt-14"><SidebarContent /></div>
+            <div className="pt-14">{sidebarContent}</div>
           </div>
           <div className="flex-1 bg-black/30" onClick={() => setMobileOpen(false)} />
         </div>

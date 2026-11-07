@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { Bell, ScrollText, MessageCircle, Heart, CornerUpLeft } from 'lucide-react'
+import { Bell, ScrollText, MessageCircle, MessageSquare, Heart, CornerUpLeft } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
 import type { RealtimeChannel } from '@supabase/supabase-js'
@@ -29,13 +29,14 @@ function TipoIcon({ tipo }: { tipo: string }) {
   const cls = 'flex-shrink-0 mt-0.5'
   const size = 13
   switch (tipo) {
-    case 'novo_post':             return <ScrollText    size={size} className={cls} style={{ color: '#800020' }} />
+    case 'nova_dm':               return <MessageSquare size={size} className={cls} style={{ color: 'var(--primary)' }} />
+    case 'novo_post':             return <ScrollText    size={size} className={cls} style={{ color: 'var(--primary)' }} />
     case 'comentario_instagram':
-    case 'comentario_social':     return <MessageCircle size={size} className={cls} style={{ color: '#800020' }} />
+    case 'comentario_social':     return <MessageCircle size={size} className={cls} style={{ color: 'var(--primary)' }} />
     case 'curtida_instagram':
-    case 'curtida_social':        return <Heart         size={size} className={cls} style={{ color: '#800020' }} />
-    case 'reply_tweet':           return <CornerUpLeft  size={size} className={cls} style={{ color: '#800020' }} />
-    default:                      return <Bell          size={size} className={cls} style={{ color: '#800020' }} />
+    case 'curtida_social':        return <Heart         size={size} className={cls} style={{ color: 'var(--primary)' }} />
+    case 'reply_tweet':           return <CornerUpLeft  size={size} className={cls} style={{ color: 'var(--primary)' }} />
+    default:                      return <Bell          size={size} className={cls} style={{ color: 'var(--primary)' }} />
   }
 }
 
@@ -126,14 +127,14 @@ export function NotificationBell({ placement = 'up' }: { placement?: Placement }
       <button
         onClick={() => setOpen(!open)}
         className="relative w-7 h-7 flex items-center justify-center rounded-lg hover:opacity-70 transition-opacity"
-        style={{ color: '#906070' }}
+        style={{ color: 'var(--foreground-muted)' }}
         title="Notificações"
       >
         <Bell size={15} />
         {naoLidas > 0 && (
           <span
             className="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full text-[9px] font-bold flex items-center justify-center"
-            style={{ background: '#800020', color: '#FAF0F2' }}
+            style={{ background: 'var(--primary)', color: 'var(--primary-foreground)' }}
           >
             {naoLidas > 9 ? '9+' : naoLidas}
           </span>
@@ -145,7 +146,7 @@ export function NotificationBell({ placement = 'up' }: { placement?: Placement }
           className={`absolute ${dropdownPos} w-72 rounded-xl overflow-hidden z-50`}
           style={{
             background: 'rgba(247,240,243,0.98)',
-            border: '0.5px solid rgba(128,0,32,0.15)',
+            border: '0.5px solid var(--p-15)',
             boxShadow: '0 8px 32px rgba(40,5,15,0.18)',
             backdropFilter: 'blur(12px)',
             WebkitBackdropFilter: 'blur(12px)',
@@ -154,16 +155,16 @@ export function NotificationBell({ placement = 'up' }: { placement?: Placement }
           {/* Header */}
           <div
             className="flex items-center justify-between px-4 py-3"
-            style={{ borderBottom: '0.5px solid rgba(128,0,32,0.10)' }}
+            style={{ borderBottom: '0.5px solid var(--p-10)' }}
           >
-            <span className="text-xs font-semibold" style={{ color: '#2E0510' }}>
+            <span className="text-xs font-semibold" style={{ color: 'var(--foreground)' }}>
               Notificações
             </span>
             {naoLidas > 0 && (
               <button
                 onClick={marcarTodasLidas}
                 className="text-[10px] hover:opacity-70 transition-opacity"
-                style={{ color: '#800020' }}
+                style={{ color: 'var(--primary)' }}
               >
                 Marcar tudo como lido
               </button>
@@ -173,7 +174,7 @@ export function NotificationBell({ placement = 'up' }: { placement?: Placement }
           {/* Lista */}
           <div className="max-h-80 overflow-y-auto">
             {notificacoes.length === 0 ? (
-              <p className="text-center text-[11px] py-8" style={{ color: '#B09098' }}>
+              <p className="text-center text-[11px] py-8" style={{ color: 'var(--muted-light)' }}>
                 Nenhuma notificação ainda
               </p>
             ) : (
@@ -182,17 +183,17 @@ export function NotificationBell({ placement = 'up' }: { placement?: Placement }
                   <div className="flex items-start gap-3 px-4 py-3">
                     <TipoIcon tipo={n.tipo} />
                     <div className="flex-1 min-w-0">
-                      <p className="text-[11px] leading-snug" style={{ color: '#2E0510' }}>
+                      <p className="text-[11px] leading-snug" style={{ color: 'var(--foreground)' }}>
                         {n.texto}
                       </p>
-                      <p className="text-[10px] mt-0.5" style={{ color: '#B09098' }}>
+                      <p className="text-[10px] mt-0.5" style={{ color: 'var(--muted-light)' }}>
                         {tempoAtras(n.created_at)}
                       </p>
                     </div>
                     {!n.lida && (
                       <div
                         className="w-1.5 h-1.5 rounded-full flex-shrink-0 mt-1.5"
-                        style={{ background: '#800020' }}
+                        style={{ background: 'var(--primary)' }}
                       />
                     )}
                   </div>
@@ -202,22 +203,22 @@ export function NotificationBell({ placement = 'up' }: { placement?: Placement }
                   <div
                     key={n.id}
                     style={{
-                      background: n.lida ? 'transparent' : 'rgba(128,0,32,0.04)',
-                      borderBottom: '0.5px solid rgba(128,0,32,0.06)',
+                      background: n.lida ? 'transparent' : 'var(--p-04)',
+                      borderBottom: '0.5px solid var(--p-06)',
                     }}
                   >
                     {n.url ? (
                       <Link
                         href={n.url}
                         onClick={() => { marcarLida(n.id); setOpen(false) }}
-                        className="block hover:bg-[rgba(128,0,32,0.04)] transition-colors"
+                        className="block hover:bg-[var(--p-04)] transition-colors"
                       >
                         {inner}
                       </Link>
                     ) : (
                       <button
                         onClick={() => marcarLida(n.id)}
-                        className="w-full text-left hover:bg-[rgba(128,0,32,0.04)] transition-colors"
+                        className="w-full text-left hover:bg-[var(--p-04)] transition-colors"
                       >
                         {inner}
                       </button>
