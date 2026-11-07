@@ -293,7 +293,7 @@ export function Sidebar({ userEmail, displayName, avatarUrl }: SidebarProps) {
       </aside>
 
       <div
-        className="md:hidden fixed top-0 left-0 right-0 z-40 flex items-center justify-between px-4 py-3"
+        className="md:hidden fixed top-0 left-0 right-0 z-40 flex items-center justify-between px-4 py-2.5"
         style={{
           background: 'rgba(247,240,243,0.90)',
           borderBottom: '0.5px solid var(--p-10)',

@@ -247,10 +247,11 @@ interface Props {
   className?: string
   onFocusChange?: (focused: boolean) => void
   onActiveFormatsChange?: (markers: string[]) => void
+  placeholderStyle?: React.CSSProperties
 }
 
 export const RichTextEditor = forwardRef<RichTextEditorHandle, Props>(
-  function RichTextEditor({ value, onChange, onSubmit, placeholder, style, className, onFocusChange, onActiveFormatsChange }, ref) {
+  function RichTextEditor({ value, onChange, onSubmit, placeholder, style, className, onFocusChange, onActiveFormatsChange, placeholderStyle }, ref) {
     const divRef = useRef<HTMLDivElement>(null)
     const composing = useRef(false)
     const lastSel = useRef<{ start: number; end: number } | null>(null)
@@ -335,7 +336,7 @@ export const RichTextEditor = forwardRef<RichTextEditorHandle, Props>(
           <span
             aria-hidden
             className="absolute top-0 left-0 pointer-events-none select-none"
-            style={{ color: 'rgba(144,96,112,0.55)', fontFamily: 'inherit', fontSize: 'inherit', lineHeight: 'inherit', whiteSpace: 'pre' }}
+            style={{ color: 'rgba(144,96,112,0.55)', fontFamily: 'inherit', fontSize: 'inherit', lineHeight: 'inherit', whiteSpace: 'pre', ...placeholderStyle }}
           >
             {placeholder}
           </span>

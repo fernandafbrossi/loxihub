@@ -86,7 +86,7 @@ export default async function ThreadPage({ params }: { params: Promise<{ id: str
         {/* Header mobile */}
         <div
           className="md:hidden flex-shrink-0 flex items-center gap-2 px-4"
-          style={{ paddingTop: 52, paddingBottom: 14, borderBottom: '0.5px solid var(--p-08)' }}
+          style={{ paddingTop: 44, paddingBottom: 8, borderBottom: '0.5px solid var(--p-08)' }}
         >
           <Hash size={13} style={{ color: 'var(--foreground-muted)', flexShrink: 0 }} />
           <OpenSidebarButton titulo={thread.titulo} />
@@ -151,7 +151,7 @@ export default async function ThreadPage({ params }: { params: Promise<{ id: str
         </div>
 
         {/* Posts + Contextos */}
-        <div className="flex-1 overflow-y-auto px-6 py-6">
+        <div className="flex-1 overflow-y-auto px-3 md:px-6 py-3 md:py-6">
           <PostsList
             items={timeline as any}
             userId={user?.id ?? ''}
@@ -163,11 +163,8 @@ export default async function ThreadPage({ params }: { params: Promise<{ id: str
         {/* Form */}
         {thread.status === 'em_andamento' && (
           <div
-            className="flex-shrink-0 px-3 md:px-6 pt-2 md:pt-4"
-            style={{
-              borderTop: '0.5px solid var(--p-08)',
-              paddingBottom: 'max(10px, env(safe-area-inset-bottom))',
-            }}
+            className="flex-shrink-0 px-3 md:px-6 pt-1 md:pt-4 md:border-t pb-[max(10px,env(safe-area-inset-bottom))] has-[:focus]:pb-2"
+            style={{ borderColor: 'var(--p-08)' }}
           >
             <PostForm
               threadId={id}

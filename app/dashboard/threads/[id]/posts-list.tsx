@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
-import { Pencil, Check, X, MapPin, Trash2, Thermometer } from 'lucide-react'
+import { Pencil, Check, X, MapPin, Trash2, Thermometer, ArrowDown } from 'lucide-react'
 import { MarkdownText } from '@/components/markdown-text'
 
 interface Post {
@@ -62,7 +62,7 @@ function Lightbox({ url, onClose }: { url: string; onClose: () => void }) {
         style={{ background: 'rgba(255,255,255,0.15)' }}
         onClick={onClose}
       >
-        <X size={16} color="#FAF0F2" />
+        <X size={16} color="var(--primary-foreground)" />
       </button>
       <img
         src={url}
@@ -90,12 +90,12 @@ function OutfitImage({ url, nome, size = 'sm', onOpen }: {
       <div className="flex flex-col items-center gap-1">
         <div
           className={`${w} ${h} rounded-lg flex items-center justify-center`}
-          style={{ background: 'rgba(128,0,32,0.06)', border: '0.5px dashed rgba(128,0,32,0.20)' }}
+          style={{ background: 'var(--p-06)', border: '0.5px dashed var(--p-20)' }}
           title="Link de imagem inválido ou bloqueado"
         >
-          <span className="text-[8px] text-center px-1" style={{ color: '#B09098' }}>link inválido</span>
+          <span className="text-[8px] text-center px-1" style={{ color: 'var(--muted-light)' }}>link inválido</span>
         </div>
-        {nome && <span className="text-[9px]" style={{ color: '#906070' }}>{nome}</span>}
+        {nome && <span className="text-[9px]" style={{ color: 'var(--foreground-muted)' }}>{nome}</span>}
       </div>
     )
   }
@@ -106,11 +106,11 @@ function OutfitImage({ url, nome, size = 'sm', onOpen }: {
         src={url}
         alt=""
         className={`${w} ${h} object-cover rounded-lg cursor-pointer hover:opacity-90 transition-opacity`}
-        style={{ border: '0.5px solid rgba(128,0,32,0.12)' }}
+        style={{ border: '0.5px solid var(--p-12)' }}
         onError={() => setBroken(true)}
         onClick={() => onOpen(url)}
       />
-      {nome && <span className="text-[9px]" style={{ color: '#906070' }}>{nome}</span>}
+      {nome && <span className="text-[9px]" style={{ color: 'var(--foreground-muted)' }}>{nome}</span>}
     </div>
   )
 }
@@ -137,28 +137,28 @@ function ContextoCard({ contexto, onOpenImage, onDelete }: {
       <div
         className="flex-1 px-4 py-3 rounded-xl"
         style={{
-          background: 'rgba(128,0,32,0.04)',
-          border: '0.5px dashed rgba(128,0,32,0.22)',
+          background: 'var(--p-04)',
+          border: '0.5px dashed var(--p-22)',
         }}
       >
         <div className="flex items-center justify-between gap-4">
           <div className="flex flex-col gap-2">
             {contexto.localizacao && (
               <div className="flex items-center gap-1.5 flex-wrap">
-                <MapPin size={11} style={{ color: '#800020', flexShrink: 0 }} />
-                <span className="text-xs font-medium" style={{ color: '#800020' }}>
+                <MapPin size={11} style={{ color: 'var(--primary)', flexShrink: 0 }} />
+                <span className="text-xs font-medium" style={{ color: 'var(--primary)' }}>
                   {contexto.localizacao}
                 </span>
                 {contexto.data_cena && (
-                  <span className="text-[10px]" style={{ color: '#906070' }}>
+                  <span className="text-[10px]" style={{ color: 'var(--foreground-muted)' }}>
                     · {new Date(contexto.data_cena + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' })}
                   </span>
                 )}
                 {contexto.temperatura_media != null && (
-                  <span className="inline-flex items-center gap-0.5 text-[10px]" style={{ color: '#906070' }}>
-                    <Thermometer size={10} style={{ color: '#800020' }} />
+                  <span className="inline-flex items-center gap-0.5 text-[10px]" style={{ color: 'var(--foreground-muted)' }}>
+                    <Thermometer size={10} style={{ color: 'var(--primary)' }} />
                     {contexto.temperatura_media}°C
-                    <span style={{ color: '#B09098' }}> (mín {contexto.temperatura_min}° · máx {contexto.temperatura_max}°)</span>
+                    <span style={{ color: 'var(--muted-light)' }}> (mín {contexto.temperatura_min}° · máx {contexto.temperatura_max}°)</span>
                   </span>
                 )}
               </div>
@@ -166,7 +166,7 @@ function ContextoCard({ contexto, onOpenImage, onDelete }: {
 
             {contexto.roupas_contexto.length > 0 && (
               <div className="flex flex-col gap-2">
-                <span className="text-[10px] uppercase tracking-widest" style={{ color: '#B09098' }}>
+                <span className="text-[10px] uppercase tracking-widest" style={{ color: 'var(--muted-light)' }}>
                   aparência do personagem
                 </span>
                 <div className="flex flex-wrap gap-3">
@@ -185,14 +185,14 @@ function ContextoCard({ contexto, onOpenImage, onDelete }: {
           </div>
 
           <div className="flex flex-col items-end gap-1 self-start flex-shrink-0">
-            <span className="text-[10px]" style={{ color: '#B09098' }}>{hora}</span>
+            <span className="text-[10px]" style={{ color: 'var(--muted-light)' }}>{hora}</span>
             <button
               onClick={handleDelete}
               disabled={deleting}
               className="opacity-60 md:opacity-0 md:group-hover:opacity-100 transition-opacity disabled:opacity-40"
               title="Apagar contexto"
             >
-              <Trash2 size={11} style={{ color: '#B09098' }} />
+              <Trash2 size={11} style={{ color: 'var(--muted-light)' }} />
             </button>
           </div>
         </div>
@@ -210,18 +210,18 @@ function Avatar({ nome, foto, isMe }: { nome: string; foto: string | null; isMe:
     <img
       src={foto}
       alt={nome}
-      className="w-14 h-14 rounded-full object-cover"
+      className="w-10 h-10 md:w-14 md:h-14 rounded-full object-cover"
       style={{ boxShadow: '0 2px 8px rgba(40,5,15,0.15)' }}
       onError={() => setImgError(true)}
     />
   ) : (
     <div
-      className="w-14 h-14 rounded-full flex items-center justify-center text-xs font-medium"
+      className="w-10 h-10 md:w-14 md:h-14 rounded-full flex items-center justify-center text-xs font-medium"
       style={{
         background: isMe
           ? 'linear-gradient(135deg, #800020, #5C0018)'
           : 'linear-gradient(135deg, #D0A0A8, #B07080)',
-        color: '#FAF0F2',
+        color: 'var(--primary-foreground)',
         boxShadow: '0 2px 8px rgba(40,5,15,0.15)',
       }}
     >
@@ -241,10 +241,28 @@ export function PostsList({ items, userId, personagens, threadId }: PostsListPro
   const seenIds = useRef(new Set(items.map(i => i.data.id)))
   const prevLength = useRef(items.length)
 
-  // Scroll inicial
+  const [showJump, setShowJump] = useState(false)
+
+  // Scroll inicial (repete após imagens/fontes carregarem para garantir que cai no fim)
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'instant' })
+    const toEnd = () => bottomRef.current?.scrollIntoView({ behavior: 'instant' })
+    toEnd()
+    const raf = requestAnimationFrame(toEnd)
+    const t = setTimeout(toEnd, 350)
     prevLength.current = localItems.length
+    return () => { cancelAnimationFrame(raf); clearTimeout(t) }
+  }, [])
+
+  // Botão "ir para o fim" quando o usuário rolou para longe do fim
+  useEffect(() => {
+    const scroller = bottomRef.current?.parentElement
+    if (!scroller) return
+    const onScroll = () => {
+      const dist = scroller.scrollHeight - scroller.scrollTop - scroller.clientHeight
+      setShowJump(dist > 400)
+    }
+    scroller.addEventListener('scroll', onScroll, { passive: true })
+    return () => scroller.removeEventListener('scroll', onScroll)
   }, [])
 
   // Sync com o servidor quando router.refresh() atualiza os props
@@ -330,11 +348,11 @@ export function PostsList({ items, userId, personagens, threadId }: PostsListPro
 
       {localItems.length === 0 ? (
         <div className="flex flex-col items-center justify-center h-full opacity-60">
-          <p className="text-sm" style={{ color: '#906070' }}>Nenhum post ainda.</p>
-          <p className="text-xs mt-1" style={{ color: '#B09098' }}>Escreva o primeiro trecho da história abaixo.</p>
+          <p className="text-sm" style={{ color: 'var(--foreground-muted)' }}>Nenhum post ainda.</p>
+          <p className="text-xs mt-1" style={{ color: 'var(--muted-light)' }}>Escreva o primeiro trecho da história abaixo.</p>
         </div>
       ) : (
-        <div className="flex flex-col gap-6">
+        <div className="flex flex-col gap-4 md:gap-6">
           {localItems.map(item => {
             if (item.type === 'contexto') {
               return (
@@ -357,17 +375,17 @@ export function PostsList({ items, userId, personagens, threadId }: PostsListPro
             })
 
             return (
-              <div key={`post-${post.id}`} className="flex gap-3.5 group">
+              <div key={`post-${post.id}`} className="flex gap-3 md:gap-3.5 group">
                 <div className="flex-shrink-0 mt-0.5">
                   <Avatar nome={povNome} foto={foto} isMe={isMe} />
                 </div>
 
                 <div className="flex-1 min-w-0">
                   <div className="flex items-baseline gap-2 mb-1">
-                    <span className="text-sm font-medium" style={{ color: isMe ? '#800020' : '#5C0018' }}>
+                    <span className="text-sm font-medium" style={{ color: 'var(--primary-dark)' }}>
                       {povNome}
                     </span>
-                    <span className="text-[10px]" style={{ color: '#B09098' }}>{hora}</span>
+                    <span className="text-[10px]" style={{ color: 'var(--muted-light)' }}>{hora}</span>
                     {isMe && !isEditing && (
                       <>
                         <button
@@ -375,14 +393,14 @@ export function PostsList({ items, userId, personagens, threadId }: PostsListPro
                           className="opacity-60 md:opacity-0 md:group-hover:opacity-100 transition-opacity ml-1"
                           title="Editar"
                         >
-                          <Pencil size={11} style={{ color: '#906070' }} />
+                          <Pencil size={11} style={{ color: 'var(--foreground-muted)' }} />
                         </button>
                         <button
                           onClick={() => handleDeletePost(post.id)}
                           className="opacity-60 md:opacity-0 md:group-hover:opacity-100 transition-opacity"
                           title="Apagar post"
                         >
-                          <Trash2 size={11} style={{ color: '#906070' }} />
+                          <Trash2 size={11} style={{ color: 'var(--foreground-muted)' }} />
                         </button>
                       </>
                     )}
@@ -398,8 +416,8 @@ export function PostsList({ items, userId, personagens, threadId }: PostsListPro
                         className="w-full text-sm leading-relaxed resize-none outline-none rounded-lg px-3 py-2"
                         style={{
                           background: 'rgba(255,255,255,0.70)',
-                          border: '0.5px solid rgba(128,0,32,0.20)',
-                          color: '#2E0510',
+                          border: '0.5px solid var(--p-20)',
+                          color: 'var(--foreground)',
                         }}
                         onKeyDown={e => {
                           if (e.key === 'Enter' && e.ctrlKey) saveEdit(post.id)
@@ -407,31 +425,33 @@ export function PostsList({ items, userId, personagens, threadId }: PostsListPro
                         }}
                       />
                       <div className="flex items-center gap-2 mt-1.5">
-                        <span className="text-[10px]" style={{ color: '#B09098' }}>
+                        <span className="text-[10px]" style={{ color: 'var(--muted-light)' }}>
                           Ctrl+Enter para salvar · Esc para cancelar
                         </span>
                         <button
                           onClick={() => saveEdit(post.id)}
                           disabled={saving}
                           className="ml-auto flex items-center gap-1 text-[11px] px-2.5 py-1 rounded-lg disabled:opacity-40"
-                          style={{ background: '#800020', color: '#FAF0F2' }}
+                          style={{ background: 'var(--btn-primary)', color: 'var(--primary-foreground)' }}
                         >
                           <Check size={11} /> Salvar
                         </button>
                         <button
                           onClick={cancelEdit}
                           className="flex items-center gap-1 text-[11px] px-2.5 py-1 rounded-lg"
-                          style={{ background: 'rgba(128,0,32,0.08)', color: '#906070' }}
+                          style={{ background: 'var(--p-08)', color: 'var(--foreground-muted)' }}
                         >
                           <X size={11} /> Cancelar
                         </button>
                       </div>
                     </div>
                   ) : (
-                    <MarkdownText
-                      text={post.conteudo}
-                      style={{ fontFamily: "'Segoe UI', system-ui, sans-serif", fontSize: 13.5, lineHeight: '1.45', fontWeight: 400, color: '#2E0510', display: 'block', textAlign: 'justify' }}
-                    />
+                    <div className="text-[15px] leading-[1.5] md:text-[13.5px] md:leading-[1.45] text-left md:text-justify">
+                      <MarkdownText
+                        text={post.conteudo}
+                        style={{ fontFamily: "'Segoe UI', system-ui, sans-serif", fontSize: 'inherit', lineHeight: 'inherit', fontWeight: 400, color: 'var(--foreground)', display: 'block', textAlign: 'inherit' }}
+                      />
+                    </div>
                   )}
                 </div>
               </div>
@@ -440,6 +460,19 @@ export function PostsList({ items, userId, personagens, threadId }: PostsListPro
         </div>
       )}
       <div ref={bottomRef} />
+      <div className="sticky bottom-0 h-0 pointer-events-none">
+        {showJump && (
+          <button
+            type="button"
+            aria-label="Ir para a última mensagem"
+            onClick={() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' })}
+            className="pointer-events-auto absolute right-1 bottom-3 w-10 h-10 rounded-full flex items-center justify-center"
+            style={{ background: 'var(--btn-primary)', color: 'var(--primary-foreground)', boxShadow: '0 4px 14px rgba(40,5,15,0.25)' }}
+          >
+            <ArrowDown size={18} />
+          </button>
+        )}
+      </div>
     </>
   )
 }

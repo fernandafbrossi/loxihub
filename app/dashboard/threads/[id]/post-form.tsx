@@ -165,6 +165,12 @@ export function PostForm({ threadId, personagemPrincipal, personagens, lugares }
 
   const povNome = selectedPersonagem?.nome ?? 'Narrador'
 
+  // Fecha o teclado antes de abrir uma sheet (no iOS ela ficaria atrás do teclado)
+  function openSheet(open: () => void) {
+    ;(document.activeElement as HTMLElement | null)?.blur()
+    open()
+  }
+
   const keepFocus = {
     onPointerDown: (e: React.PointerEvent) => e.preventDefault(),
     onMouseDown: (e: React.MouseEvent) => e.preventDefault(),
@@ -181,7 +187,7 @@ export function PostForm({ threadId, personagemPrincipal, personagens, lugares }
         title={label}
         {...keepFocus}
         onClick={() => applyFormat(fmt)}
-        className="w-11 h-9 md:w-auto md:h-auto md:p-1.5 rounded-lg md:rounded-md flex items-center justify-center transition-colors"
+        className="w-9 h-8 md:w-auto md:h-auto md:p-1.5 rounded-lg md:rounded-md flex items-center justify-center transition-colors"
         style={{
           background: active ? 'var(--primary)' : 'var(--p-07)',
           color: active ? 'var(--primary-foreground)' : 'var(--primary)',
@@ -279,60 +285,57 @@ export function PostForm({ threadId, personagemPrincipal, personagens, lugares }
       {/* Toolbar de formatação — desktop (sempre visível) */}
       <div className="hidden md:flex gap-1.5 mb-2">{formatButtons}</div>
 
-      {/* Faixa de formatação — mobile (só com o campo em foco) */}
-      {focused && (
-        <div className="md:hidden flex items-center gap-1.5 mb-2 px-1">{formatButtons}</div>
-      )}
+      {/* Linha de contexto — mobile: "como fulano ▾" + formatação (só com foco) */}
+      <div className="md:hidden flex items-center justify-between gap-2 mb-1.5 px-2 min-h-8">
+        <button
+          type="button"
+          aria-label={`Falando como ${povNome}. Trocar personagem`}
+          onClick={() => openSheet(() => setSheetOpen(true))}
+          className="flex items-center gap-1 min-w-0 text-xs"
+          style={{ color: 'var(--foreground-muted)' }}
+        >
+          <span className="truncate">
+            como <span className="font-medium" style={{ color: 'var(--foreground)' }}>{povNome}</span>
+          </span>
+          <ChevronDown size={12} className="flex-shrink-0" />
+        </button>
+        {focused && <div className="flex gap-1 flex-shrink-0">{formatButtons}</div>}
+      </div>
 
-      {/* Barra de escrita: ＋  [avatar + campo]  enviar */}
-      <div className="flex items-end gap-2">
+      {/* Barra de escrita: [＋  campo  enviar] numa pílula só */}
+      <div
+        className="flex items-end gap-1 rounded-3xl md:rounded-xl pl-1 pr-1.5 md:px-4 md:gap-2 min-h-12 md:min-h-0 md:py-3"
+        style={{
+          background: 'rgba(255,255,255,0.75)',
+          border: '0.5px solid var(--p-12)',
+          boxShadow: '0 2px 12px rgba(40,5,15,0.05)',
+        }}
+      >
         <button
           type="button"
           aria-label="Contexto de cena"
-          {...keepFocus}
-          onClick={() => setCenaOpen(true)}
-          className="md:hidden flex-shrink-0 w-11 h-11 rounded-full flex items-center justify-center"
-          style={{ background: 'var(--p-10)', color: 'var(--primary)' }}
+          onClick={() => openSheet(() => setCenaOpen(true))}
+          className="md:hidden flex-shrink-0 w-10 h-12 flex items-center justify-center"
+          style={{ color: 'var(--primary)' }}
         >
-          <Plus size={20} />
+          <Plus size={22} />
         </button>
 
         <div
-          className="flex-1 min-w-0 flex items-end gap-2 rounded-3xl md:rounded-xl pl-1.5 pr-4 md:px-4 py-1.5 md:py-3"
-          style={{
-            background: 'rgba(255,255,255,0.65)',
-            border: '0.5px solid var(--p-12)',
-            boxShadow: '0 2px 12px rgba(40,5,15,0.05)',
-          }}
+          className="flex-1 min-w-0 py-3 md:py-0 text-base md:text-sm"
+          style={{ lineHeight: '1.4', color: 'var(--foreground)' }}
         >
-          <button
-            type="button"
-            aria-label={`Falando como ${povNome}. Trocar personagem`}
-            {...keepFocus}
-            onClick={() => setSheetOpen(true)}
-            className="md:hidden flex-shrink-0 w-9 h-9 flex items-center justify-center"
-          >
-            {selectedPersonagem
-              ? <Avatar p={selectedPersonagem} size={8} />
-              : <div className="w-8 h-8 rounded-full" style={{ background: 'var(--p-15)' }} />
-            }
-          </button>
-
-          <div
-            className="flex-1 min-w-0 py-2 md:py-0 text-base md:text-sm"
-            style={{ lineHeight: '1.4', color: 'var(--foreground)' }}
-          >
-            <RichTextEditor
-              ref={editorRef}
-              value={conteudo}
-              onChange={setConteudo}
-              onSubmit={() => handleSubmit({ preventDefault: () => {} } as React.FormEvent)}
-              onFocusChange={setFocused}
-              onActiveFormatsChange={setActiveFmts}
-              placeholder={`Escreva como ${povNome}...`}
-              style={{ color: 'var(--foreground)', maxHeight: '10rem' }}
-            />
-          </div>
+          <RichTextEditor
+            ref={editorRef}
+            value={conteudo}
+            onChange={setConteudo}
+            onSubmit={() => handleSubmit({ preventDefault: () => {} } as React.FormEvent)}
+            onFocusChange={setFocused}
+            onActiveFormatsChange={setActiveFmts}
+            placeholder={`Escreva como ${povNome}...`}
+            placeholderStyle={{ fontSize: '0.875rem', lineHeight: '1.4rem' }}
+            style={{ color: 'var(--foreground)', maxHeight: '40dvh' }}
+          />
         </div>
 
         <button
@@ -340,10 +343,10 @@ export function PostForm({ threadId, personagemPrincipal, personagens, lugares }
           aria-label="Enviar"
           disabled={loading || !conteudo.trim()}
           {...keepFocus}
-          className="flex-shrink-0 w-11 h-11 md:w-8 md:h-8 rounded-full md:rounded-lg flex items-center justify-center disabled:opacity-30 transition-opacity hover:opacity-80"
+          className={`flex-shrink-0 w-9 h-9 md:w-8 md:h-8 mb-1.5 md:mb-0 rounded-full md:rounded-lg items-center justify-center disabled:opacity-30 transition-opacity hover:opacity-80 ${conteudo.trim() ? 'flex' : 'hidden md:flex'}`}
           style={{ background: 'var(--btn-primary)', color: 'var(--primary-foreground)' }}
         >
-          <Send size={16} />
+          <Send size={15} />
         </button>
       </div>
 
