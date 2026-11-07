@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { ScrollText, MapPin, Users, Home, LogOut, Menu, X, ArrowLeft, Smartphone, CalendarDays, ChevronDown, Check, Plus, PanelLeftClose, PanelLeftOpen, GitBranch, Lock, Settings, MessageCircle } from 'lucide-react'
+import { ScrollText, MapPin, Users, Home, LogOut, Menu, X, ArrowLeft, Smartphone, CalendarDays, ChevronDown, Check, Plus, PanelLeftClose, PanelLeftOpen, GitBranch, Settings, MessageCircle } from 'lucide-react'
 import { NotificationBell } from '@/components/notifications-bell'
 import { BottomSheet } from '@/components/bottom-sheet'
 import { lastThreadKey } from '@/app/dashboard/threads/[id]/remember-thread'
@@ -57,7 +57,7 @@ export function Sidebar({ userEmail, displayName, avatarUrl }: SidebarProps) {
       return
     }
 
-    const isContentPage = /^\/dashboard\/(personagens|lugares|threads|arvore|redes-sociais|linha-do-tempo|instagram|twitter)/.test(pathname)
+    const isContentPage = /^\/dashboard\/(personagens|lugares|threads|arvore|redes-sociais|linha-do-tempo|instagram)/.test(pathname)
     if (isContentPage) {
       const saved = sessionStorage.getItem('sidebarUniversoId')
       if (saved) { setUniversoFromContext(saved); return }
@@ -84,7 +84,6 @@ export function Sidebar({ userEmail, displayName, avatarUrl }: SidebarProps) {
     { href: `/dashboard/redes-sociais?universo=${universoId}`, label: 'Redes Sociais', icon: Smartphone },
     { href: `/dashboard/arvore?universo=${universoId}`, label: 'Vínculos', icon: GitBranch },
     { href: `/dashboard/linha-do-tempo?universo=${universoId}`, label: 'Linha do tempo', icon: CalendarDays },
-    { href: `/dashboard/universos/${universoId}/segredos`, label: 'Segredos', icon: Lock },
   ] : []
 
   async function openUniversoSheet() {

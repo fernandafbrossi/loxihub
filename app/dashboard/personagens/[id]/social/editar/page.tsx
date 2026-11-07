@@ -9,7 +9,7 @@ import { ImageUpload } from '@/components/image-upload'
 
 interface Conta {
   id: string
-  tipo: 'twitter' | 'instagram'
+  tipo: 'instagram'
   nome: string
   username: string | null
   bio: string | null
@@ -24,8 +24,8 @@ const inputStyle = {
   borderRadius: '10px',
   fontSize: '13px',
   background: 'rgba(255,255,255,0.70)',
-  border: '0.5px solid rgba(128,0,32,0.15)',
-  color: '#2E0510',
+  border: '0.5px solid var(--p-15)',
+  color: 'var(--foreground)',
   outline: 'none',
 } as const
 
@@ -36,7 +36,7 @@ const labelStyle = {
   textTransform: 'uppercase' as const,
   letterSpacing: '0.08em',
   marginBottom: '6px',
-  color: '#906070',
+  color: 'var(--foreground-muted)',
 }
 
 function ContaCard({ conta, personagemId, onUpdated, onDeleted }: {
@@ -80,38 +80,37 @@ function ContaCard({ conta, personagemId, onUpdated, onDeleted }: {
     onDeleted(conta.id)
   }
 
-  const isTwitter = conta.tipo === 'twitter'
-  const bioMax = isTwitter ? 160 : 150
+  const bioMax = 150
 
   return (
-    <div className="rounded-xl overflow-hidden" style={{ border: '0.5px solid rgba(128,0,32,0.10)' }}>
+    <div className="rounded-xl overflow-hidden" style={{ border: '0.5px solid var(--p-10)' }}>
       {/* Header da conta */}
       <div
         className="flex items-center gap-3 px-4 py-3 cursor-pointer transition-colors hover:opacity-90"
-        style={{ background: 'rgba(255,255,255,0.60)' }}
+        style={{ background: 'var(--card)' }}
         onClick={() => setOpen(v => !v)}
       >
         {/* Avatar */}
         <div className="w-8 h-8 rounded-full overflow-hidden flex-shrink-0 flex items-center justify-center text-xs font-semibold"
-          style={{ background: 'linear-gradient(135deg, #800020, #5C0018)', color: '#FAF0F2' }}>
+          style={{ background: 'linear-gradient(135deg, #800020, #5C0018)', color: 'var(--primary-foreground)' }}>
           {fotoUrl
             ? <img src={fotoUrl} alt="" className="w-full h-full object-cover" />
             : (username || nome)[0]?.toUpperCase() ?? '?'
           }
         </div>
         <div className="flex-1 min-w-0">
-          <p className="text-xs font-semibold" style={{ color: '#2E0510' }}>
+          <p className="text-xs font-semibold" style={{ color: 'var(--foreground)' }}>
             {username ? `@${username}` : conta.nome}
           </p>
-          {username && <p className="text-[10px]" style={{ color: '#B09098' }}>{conta.nome}</p>}
+          {username && <p className="text-[10px]" style={{ color: 'var(--muted-light)' }}>{conta.nome}</p>}
         </div>
         <button onClick={e => { e.stopPropagation(); deleteConta() }}
           disabled={deleting}
           className="p-1.5 transition-opacity hover:opacity-60 disabled:opacity-30"
-          style={{ color: '#B09098' }}>
+          style={{ color: 'var(--muted-light)' }}>
           <Trash2 size={13} />
         </button>
-        {open ? <ChevronUp size={14} style={{ color: '#B09098' }} /> : <ChevronDown size={14} style={{ color: '#B09098' }} />}
+        {open ? <ChevronUp size={14} style={{ color: 'var(--muted-light)' }} /> : <ChevronDown size={14} style={{ color: 'var(--muted-light)' }} />}
       </div>
 
       {/* Form editável */}
@@ -120,7 +119,7 @@ function ContaCard({ conta, personagemId, onUpdated, onDeleted }: {
           <div>
             <label style={labelStyle}>Nome da conta</label>
             <input style={inputStyle} value={nome} onChange={e => setNome(e.target.value)} placeholder="ex: principal, finsta, alt..." />
-            <p className="text-[10px] mt-1" style={{ color: '#B09098' }}>Identificador interno (não aparece no feed)</p>
+            <p className="text-[10px] mt-1" style={{ color: 'var(--muted-light)' }}>Identificador interno (não aparece no feed)</p>
           </div>
 
           <div>
@@ -131,7 +130,7 @@ function ContaCard({ conta, personagemId, onUpdated, onDeleted }: {
           <div>
             <label style={labelStyle}>Username</label>
             <div className="relative">
-              <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-sm select-none" style={{ color: '#B09098' }}>@</span>
+              <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-sm select-none" style={{ color: 'var(--muted-light)' }}>@</span>
               <input
                 style={{ ...inputStyle, paddingLeft: 28 }}
                 value={username}
@@ -158,23 +157,23 @@ function ContaCard({ conta, personagemId, onUpdated, onDeleted }: {
               style={{ ...inputStyle, minHeight: 72, resize: 'vertical' }}
               value={bio}
               onChange={e => setBio(e.target.value)}
-              placeholder={`Bio que aparece no perfil do ${isTwitter ? 'Twitter' : 'Instagram'}...`}
+              placeholder={`Bio que aparece no perfil do Instagram...`}
               maxLength={bioMax}
             />
-            <p className="text-[10px] mt-1 text-right" style={{ color: '#B09098' }}>{bio.length}/{bioMax}</p>
+            <p className="text-[10px] mt-1 text-right" style={{ color: 'var(--muted-light)' }}>{bio.length}/{bioMax}</p>
           </div>
 
           {error && (
-            <p className="text-xs px-3 py-2 rounded-lg" style={{ background: 'rgba(192,0,0,0.08)', color: '#c0392b' }}>{error}</p>
+            <p className="text-xs px-3 py-2 rounded-lg" style={{ background: 'rgba(192,0,0,0.08)', color: 'var(--destructive)' }}>{error}</p>
           )}
 
           <div className="flex gap-2">
             <button onClick={() => setOpen(false)}
               className="flex-1 py-2 rounded-xl text-xs transition-opacity hover:opacity-70"
-              style={{ background: 'rgba(128,0,32,0.07)', color: '#906070' }}>Cancelar</button>
+              style={{ background: 'var(--p-07)', color: 'var(--foreground-muted)' }}>Cancelar</button>
             <button onClick={save} disabled={saving}
               className="flex-1 py-2 rounded-xl text-xs font-medium disabled:opacity-50 transition-opacity hover:opacity-80"
-              style={{ background: '#800020', color: '#FAF0F2' }}>
+              style={{ background: 'var(--btn-primary)', color: 'var(--primary-foreground)' }}>
               {saving ? 'Salvando...' : 'Salvar'}
             </button>
           </div>
@@ -185,7 +184,7 @@ function ContaCard({ conta, personagemId, onUpdated, onDeleted }: {
 }
 
 function TipoSection({ tipo, contas, personagemId, onAdd, onUpdated, onDeleted }: {
-  tipo: 'twitter' | 'instagram'
+  tipo: 'instagram'
   contas: Conta[]
   personagemId: string
   onAdd: (c: Conta) => void
@@ -207,29 +206,24 @@ function TipoSection({ tipo, contas, personagemId, onAdd, onUpdated, onDeleted }
     setNovaNome(''); setCreating(false); setCriando(false)
   }
 
-  const isTwitter = tipo === 'twitter'
-  const icon = isTwitter ? (
-    <svg width="13" height="13" viewBox="0 0 24 24" fill="#2E0510">
-      <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.744l7.736-8.856L2 2.25h6.845l4.259 5.63L18.244 2.25zm-1.161 17.52h1.833L7.084 4.126H5.117L17.083 19.77z" />
-    </svg>
-  ) : (
-    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#2E0510" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+  const icon = (
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--foreground)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <rect x="2" y="2" width="20" height="20" rx="5" ry="5" />
       <circle cx="12" cy="12" r="4" />
-      <circle cx="17.5" cy="6.5" r="1" fill="#2E0510" stroke="none" />
+      <circle cx="17.5" cy="6.5" r="1" fill="var(--foreground)" stroke="none" />
     </svg>
   )
 
   return (
-    <div className="rounded-xl p-4 flex flex-col gap-3" style={{ background: 'rgba(255,255,255,0.50)', border: '0.5px solid rgba(128,0,32,0.08)' }}>
+    <div className="rounded-xl p-4 flex flex-col gap-3" style={{ background: 'rgba(255,255,255,0.50)', border: '0.5px solid var(--p-08)' }}>
       <div className="flex items-center gap-2">
         {icon}
-        <p style={{ ...labelStyle as any, margin: 0 }}>{isTwitter ? 'Twitter' : 'Instagram'}</p>
-        <span className="text-[10px] ml-auto" style={{ color: '#B09098' }}>{contas.length} {contas.length === 1 ? 'conta' : 'contas'}</span>
+        <p style={{ ...labelStyle as any, margin: 0 }}>Instagram</p>
+        <span className="text-[10px] ml-auto" style={{ color: 'var(--muted-light)' }}>{contas.length} {contas.length === 1 ? 'conta' : 'contas'}</span>
       </div>
 
       {contas.length === 0 && !creating && (
-        <p className="text-xs text-center py-2" style={{ color: '#B09098' }}>Nenhuma conta ainda</p>
+        <p className="text-xs text-center py-2" style={{ color: 'var(--muted-light)' }}>Nenhuma conta ainda</p>
       )}
 
       {contas.map(c => (
@@ -243,22 +237,22 @@ function TipoSection({ tipo, contas, personagemId, onAdd, onUpdated, onDeleted }
             onKeyDown={e => { if (e.key === 'Enter') criar(); if (e.key === 'Escape') { setCreating(false); setNovaNome('') } }}
             placeholder="nome da nova conta (ex: finsta)" autoFocus
             className="flex-1 text-xs px-3 py-2 rounded-xl outline-none"
-            style={{ background: 'rgba(255,255,255,0.80)', border: '0.5px solid rgba(128,0,32,0.15)', color: '#2E0510' }}
+            style={{ background: 'rgba(255,255,255,0.80)', border: '0.5px solid var(--p-15)', color: 'var(--foreground)' }}
           />
           <button onClick={criar} disabled={criando || !novaNome.trim()}
             className="text-xs px-3 py-2 rounded-xl font-medium disabled:opacity-40"
-            style={{ background: '#800020', color: '#FAF0F2' }}>
+            style={{ background: 'var(--btn-primary)', color: 'var(--primary-foreground)' }}>
             {criando ? '...' : 'Criar'}
           </button>
           <button onClick={() => { setCreating(false); setNovaNome('') }}
             className="text-xs px-2 py-2 rounded-xl"
-            style={{ background: 'rgba(128,0,32,0.07)', color: '#906070' }}>✕</button>
+            style={{ background: 'var(--p-07)', color: 'var(--foreground-muted)' }}>✕</button>
         </div>
       ) : (
         <button onClick={() => setCreating(true)}
           className="flex items-center gap-2 text-xs py-2 transition-opacity hover:opacity-70"
-          style={{ color: '#B09098' }}>
-          <Plus size={13} /> Adicionar conta {isTwitter ? 'Twitter' : 'Instagram'}
+          style={{ color: 'var(--muted-light)' }}>
+          <Plus size={13} /> Adicionar conta Instagram
         </button>
       )}
     </div>
@@ -276,7 +270,6 @@ export default function GerenciarContasPage() {
       .then(({ data }) => { setContas((data ?? []) as Conta[]); setLoading(false) })
   }, [id])
 
-  const twitterContas = contas.filter(c => c.tipo === 'twitter')
   const instagramContas = contas.filter(c => c.tipo === 'instagram')
 
   function handleAdd(c: Conta) { setContas(prev => [...prev, c]) }
@@ -288,30 +281,22 @@ export default function GerenciarContasPage() {
       <Link
         href={`/dashboard/personagens/${id}/social`}
         className="inline-flex items-center gap-1.5 text-xs mb-6 hover:opacity-70 transition-opacity"
-        style={{ color: '#906070' }}
+        style={{ color: 'var(--foreground-muted)' }}
       >
         <ArrowLeft size={13} /> Voltar para o perfil social
       </Link>
 
-      <h1 className="text-xl font-medium mb-1" style={{ color: '#2E0510' }}>Gerenciar contas sociais</h1>
-      <p className="text-xs mb-7" style={{ color: '#906070' }}>
+      <h1 className="text-xl font-medium mb-1" style={{ color: 'var(--foreground)' }}>Gerenciar contas sociais</h1>
+      <p className="text-xs mb-7" style={{ color: 'var(--foreground-muted)' }}>
         Configure os perfis de cada rede social. Cada conta pode ter foto, username, bio e estatísticas próprios.
       </p>
 
       {loading ? (
         <div className="text-center py-10 opacity-40">
-          <p className="text-sm" style={{ color: '#906070' }}>Carregando...</p>
+          <p className="text-sm" style={{ color: 'var(--foreground-muted)' }}>Carregando...</p>
         </div>
       ) : (
         <div className="flex flex-col gap-5">
-          <TipoSection
-            tipo="twitter"
-            contas={twitterContas}
-            personagemId={id}
-            onAdd={handleAdd}
-            onUpdated={handleUpdated}
-            onDeleted={handleDeleted}
-          />
           <TipoSection
             tipo="instagram"
             contas={instagramContas}

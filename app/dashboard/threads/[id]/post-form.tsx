@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
-import { Send, ChevronDown, Bold, Italic, Underline, Strikethrough, Plus, Check } from 'lucide-react'
+import { Send, ChevronDown, Bold, Italic, Plus, Check } from 'lucide-react'
 import { RichTextEditor, type RichTextEditorHandle } from '@/components/rich-text-editor'
 import { BottomSheet } from '@/components/bottom-sheet'
 import { CenaForm } from './cena-form'
@@ -81,7 +81,7 @@ export function PostForm({ threadId, personagemPrincipal, personagens, lugares }
   const editorRef = useRef<RichTextEditorHandle>(null)
   const router = useRouter()
 
-  const FORMAT_MARKERS: Record<string, string> = { bold: '**', italic: '*', underline: '__', strikethrough: '~~' }
+  const FORMAT_MARKERS: Record<string, string> = { bold: '**', italic: '*' }
 
   function applyFormat(format: string) {
     editorRef.current?.applyFormat(FORMAT_MARKERS[format])
@@ -177,7 +177,7 @@ export function PostForm({ threadId, personagemPrincipal, personagens, lugares }
     onMouseDown: (e: React.MouseEvent) => e.preventDefault(),
   }
 
-  const formatButtons = ([['bold', Bold, 'Negrito'], ['italic', Italic, 'Itálico'], ['underline', Underline, 'Sublinhado'], ['strikethrough', Strikethrough, 'Riscado']] as const).map(([fmt, Icon, label]) => {
+  const formatButtons = ([['bold', Bold, 'Negrito'], ['italic', Italic, 'Itálico']] as const).map(([fmt, Icon, label]) => {
     const active = activeFmts.includes(FORMAT_MARKERS[fmt])
     return (
       <button
