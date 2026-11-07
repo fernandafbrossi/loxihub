@@ -7,6 +7,7 @@ import { PostsList } from './posts-list'
 import { ThreadHistory } from './thread-history'
 import { ThreadSidebar } from './thread-sidebar'
 import { OpenSidebarButton } from './open-sidebar-button'
+import { RememberThread } from './remember-thread'
 
 export default async function ThreadPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -72,6 +73,7 @@ export default async function ThreadPage({ params }: { params: Promise<{ id: str
 
   return (
     <div className="flex overflow-hidden h-[100dvh] md:h-[calc(100vh-40px)]">
+      <RememberThread universoId={thread.universo_id ?? null} threadId={id} />
 
       {/* ── Painel esquerdo: lista de capítulos ── */}
       <ThreadSidebar

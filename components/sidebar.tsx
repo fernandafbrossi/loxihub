@@ -2,8 +2,10 @@
 
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { ScrollText, MapPin, Users, Home, LogOut, Menu, X, ArrowLeft, Smartphone, CalendarDays, PanelLeftClose, PanelLeftOpen, GitBranch, Lock, Settings, MessageCircle } from 'lucide-react'
+import { ScrollText, MapPin, Users, Home, LogOut, Menu, X, ArrowLeft, Smartphone, CalendarDays, ChevronDown, Check, Plus, PanelLeftClose, PanelLeftOpen, GitBranch, Lock, Settings, MessageCircle } from 'lucide-react'
 import { NotificationBell } from '@/components/notifications-bell'
+import { BottomSheet } from '@/components/bottom-sheet'
+import { lastThreadKey } from '@/app/dashboard/threads/[id]/remember-thread'
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 
@@ -24,6 +26,8 @@ export function Sidebar({ userEmail, displayName, avatarUrl }: SidebarProps) {
   const [collapsed, setCollapsed] = useState(false)
   const [universoNome, setUniversoNome] = useState<string | null>(null)
   const [universoFromContext, setUniversoFromContext] = useState<string | null>(null)
+  const [universoSheetOpen, setUniversoSheetOpen] = useState(false)
+  const [universos, setUniversos] = useState<{ id: string; nome: string }[] | null>(null)
   const router = useRouter()
 
   const universoMatch = pathname.match(/^\/dashboard\/universos\/([^/]+)/)
@@ -82,6 +86,35 @@ export function Sidebar({ userEmail, displayName, avatarUrl }: SidebarProps) {
     { href: `/dashboard/linha-do-tempo?universo=${universoId}`, label: 'Linha do tempo', icon: CalendarDays },
     { href: `/dashboard/universos/${universoId}/segredos`, label: 'Segredos', icon: Lock },
   ] : []
+
+  async function openUniversoSheet() {
+    setUniversoSheetOpen(true)
+    const supabase = createClient()
+    const { data } = await supabase
+      .from('universos')
+      .select('id, nome')
+      .order('updated_at', { ascending: false })
+    setUniversos(data ?? [])
+  }
+
+  async function switchUniverso(id: string) {
+    setUniversoSheetOpen(false)
+    if (id === universoId) return
+    sessionStorage.setItem('sidebarUniversoId', id)
+    let lastId: string | null = null
+    try { lastId = localStorage.getItem(lastThreadKey(id)) } catch {}
+    if (lastId) {
+      const supabase = createClient()
+      const { data } = await supabase
+        .from('threads')
+        .select('id')
+        .eq('id', lastId)
+        .eq('universo_id', id)
+        .maybeSingle()
+      if (data) { router.push(`/dashboard/threads/${lastId}`); return }
+    }
+    router.push(`/dashboard/threads?universo=${id}`)
+  }
 
   async function handleLogout() {
     const supabase = createClient()
@@ -301,16 +334,65 @@ export function Sidebar({ userEmail, displayName, avatarUrl }: SidebarProps) {
           WebkitBackdropFilter: 'blur(10px)',
         }}
       >
-        <div className="flex items-center gap-2">
-          <div className="w-2 h-2 rounded-full" style={{ background: 'var(--primary)', boxShadow: '0 0 0 2px var(--p-15)' }} />
-          <span className="text-sm font-medium" style={{ color: 'var(--foreground)' }}>
-            {universoNome ?? 'LoxiHub'}
-          </span>
-        </div>
+        {universoId ? (
+          <button
+            type="button"
+            onClick={openUniversoSheet}
+            aria-label="Trocar de universo"
+            className="flex items-center gap-2 min-w-0"
+          >
+            <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: 'var(--primary)', boxShadow: '0 0 0 2px var(--p-15)' }} />
+            <span className="text-sm font-medium truncate" style={{ color: 'var(--foreground)' }}>
+              {universoNome ?? '...'}
+            </span>
+            <ChevronDown size={14} className="flex-shrink-0" style={{ color: 'var(--foreground-muted)' }} />
+          </button>
+        ) : (
+          <div className="flex items-center gap-2">
+            <div className="w-2 h-2 rounded-full" style={{ background: 'var(--primary)', boxShadow: '0 0 0 2px var(--p-15)' }} />
+            <span className="text-sm font-medium" style={{ color: 'var(--foreground)' }}>LoxiHub</span>
+          </div>
+        )}
         <button onClick={() => setMobileOpen(!mobileOpen)} style={{ color: 'var(--foreground)' }}>
           {mobileOpen ? <X size={20} /> : <Menu size={20} />}
         </button>
       </div>
+
+      <BottomSheet open={universoSheetOpen} onClose={() => setUniversoSheetOpen(false)} title="Universos">
+        {universos === null ? (
+          <p className="px-3 py-3 text-sm" style={{ color: 'var(--foreground-muted)' }}>Carregando...</p>
+        ) : (
+          <>
+            {universos.map(u => (
+              <button
+                key={u.id}
+                type="button"
+                onClick={() => switchUniverso(u.id)}
+                className="flex items-center gap-3 w-full text-left px-3 py-3 rounded-xl"
+                style={{ background: u.id === universoId ? 'var(--p-08)' : 'transparent' }}
+              >
+                <span
+                  className="w-9 h-9 rounded-xl flex items-center justify-center text-sm font-medium flex-shrink-0"
+                  style={{ background: 'var(--primary)', color: 'var(--primary-foreground)' }}
+                >
+                  {u.nome[0]?.toUpperCase()}
+                </span>
+                <span className="text-sm font-medium truncate" style={{ color: 'var(--foreground)' }}>{u.nome}</span>
+                {u.id === universoId && <Check size={16} className="ml-auto flex-shrink-0" style={{ color: 'var(--primary)' }} />}
+              </button>
+            ))}
+            <Link
+              href="/dashboard/universos/novo"
+              onClick={() => setUniversoSheetOpen(false)}
+              className="flex items-center gap-3 w-full px-3 py-3 rounded-xl text-sm font-medium"
+              style={{ color: 'var(--primary)' }}
+            >
+              <span className="w-9 h-9 flex items-center justify-center flex-shrink-0"><Plus size={20} /></span>
+              Novo universo
+            </Link>
+          </>
+        )}
+      </BottomSheet>
 
       {mobileOpen && (
         <div className="md:hidden fixed inset-0 z-30 flex">
