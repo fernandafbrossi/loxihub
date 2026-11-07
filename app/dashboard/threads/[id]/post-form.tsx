@@ -143,12 +143,12 @@ export function PostForm({ threadId, personagemPrincipal, personagens, lugares }
     const supabase = createClient()
     const { data: { user } } = await supabase.auth.getUser()
 
-    const { error } = await supabase.from('posts').insert({
+    const { data: novoPost, error } = await supabase.from('posts').insert({
       thread_id: threadId,
       conteudo: conteudo.trim(),
       personagem_pov: selectedPersonagem?.nome ?? null,
       criado_por: user?.id,
-    })
+    }).select('id, thread_id, conteudo, personagem_pov, criado_por, created_at').single()
 
     if (error) {
       // mantém o texto (rascunho) para não perder o post
@@ -157,6 +157,7 @@ export function PostForm({ threadId, personagemPrincipal, personagens, lugares }
       return
     }
 
+    if (novoPost) window.dispatchEvent(new CustomEvent('loxihub-post-added', { detail: novoPost }))
     setConteudo('')
     localStorage.removeItem(DRAFT_KEY(threadId))
     setLoading(false)

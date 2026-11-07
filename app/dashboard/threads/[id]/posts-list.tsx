@@ -265,11 +265,53 @@ export function PostsList({ items, userId, personagens, threadId }: PostsListPro
     return () => scroller.removeEventListener('scroll', onScroll)
   }, [])
 
-  // Sync com o servidor quando router.refresh() atualiza os props
+  const deletedIds = useRef(new Set<string>())
+
+  // Sync com o servidor quando router.refresh() atualiza os props.
+  // Faz merge (em vez de substituir) para não perder um post que chegou por
+  // realtime enquanto o refresh ainda carregava dados mais antigos.
   useEffect(() => {
-    setLocalItems(items)
-    seenIds.current = new Set(items.map(i => i.data.id))
+    setLocalItems(prev => {
+      const serverIds = new Set(items.map(i => i.data.id))
+      const agora = Date.now()
+      const extras = prev.filter(i =>
+        i.type === 'post' &&
+        !serverIds.has(i.data.id) &&
+        !deletedIds.current.has(i.data.id) &&
+        agora - new Date(i.data.created_at).getTime() < 120_000
+      )
+      const merged = [...items.filter(i => !deletedIds.current.has(i.data.id)), ...extras].sort(
+        (a, b) => new Date(a.data.created_at).getTime() - new Date(b.data.created_at).getTime()
+      )
+      seenIds.current = new Set(merged.map(i => i.data.id))
+      return merged
+    })
   }, [items])
+
+  // Post enviado por este aparelho aparece na hora, sem esperar o refresh
+  useEffect(() => {
+    function onAdded(e: Event) {
+      const p = (e as CustomEvent<Post & { thread_id: string }>).detail
+      if (!p || p.thread_id !== threadId || seenIds.current.has(p.id)) return
+      seenIds.current.add(p.id)
+      setLocalItems(prev => [...prev, { type: 'post', data: p }])
+    }
+    window.addEventListener('loxihub-post-added', onAdded)
+    return () => window.removeEventListener('loxihub-post-added', onAdded)
+  }, [threadId])
+
+  // Ao voltar para o app (iOS suspende a conexão em segundo plano), busca o que faltou
+  useEffect(() => {
+    function onVisible() {
+      if (document.visibilityState === 'visible') router.refresh()
+    }
+    document.addEventListener('visibilitychange', onVisible)
+    window.addEventListener('online', onVisible)
+    return () => {
+      document.removeEventListener('visibilitychange', onVisible)
+      window.removeEventListener('online', onVisible)
+    }
+  }, [router])
 
   // Scroll quando chegam posts novos (realtime ou refresh)
   useEffect(() => {
@@ -295,7 +337,32 @@ export function PostsList({ items, userId, personagens, threadId }: PostsListPro
           setLocalItems(prev => [...prev, { type: 'post', data: p }])
         }
       )
-      .subscribe()
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'posts' },
+        (payload) => {
+          const p = payload.new as Post & { thread_id: string }
+          if (p.thread_id !== threadId) return
+          setLocalItems(prev => prev.map(i =>
+            i.type === 'post' && i.data.id === p.id ? { type: 'post', data: { ...i.data, ...p } } : i
+          ))
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: 'DELETE', schema: 'public', table: 'posts' },
+        (payload) => {
+          const id = (payload.old as { id?: string }).id
+          if (!id) return
+          deletedIds.current.add(id)
+          seenIds.current.delete(id)
+          setLocalItems(prev => prev.filter(i => i.data.id !== id))
+        }
+      )
+      .subscribe((status) => {
+        // Se a conexão realtime cair, recupera o que foi perdido
+        if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') router.refresh()
+      })
 
     return () => { channel.unsubscribe() }
   }, [threadId])
@@ -308,7 +375,12 @@ export function PostsList({ items, userId, personagens, threadId }: PostsListPro
 
   async function handleDeletePost(id: string) {
     const supabase = createClient()
-    await supabase.from('posts').delete().eq('id', id)
+    const { data, error } = await supabase.from('posts').delete().eq('id', id).select('id')
+    if (error || !data || data.length === 0) {
+      alert('Não foi possível apagar o post. Tente de novo.')
+      return
+    }
+    deletedIds.current.add(id)
     setLocalItems(prev => prev.filter(i => i.data.id !== id))
     seenIds.current.delete(id)
   }
@@ -332,8 +404,17 @@ export function PostsList({ items, userId, personagens, threadId }: PostsListPro
     if (!editConteudo.trim()) return
     setSaving(true)
     const supabase = createClient()
-    await supabase.from('posts').update({ conteudo: editConteudo.trim() }).eq('id', postId)
+    const { data, error } = await supabase
+      .from('posts')
+      .update({ conteudo: editConteudo.trim() })
+      .eq('id', postId)
+      .select('id')
     setSaving(false)
+    if (error || !data || data.length === 0) {
+      // O banco não aplicou a edição (ex.: sem permissão de UPDATE) — não finge que salvou
+      alert('Não foi possível salvar a edição. Seu texto continua aqui para você tentar de novo.')
+      return
+    }
     setEditingId(null)
     setLocalItems(prev => prev.map(i =>
       i.type === 'post' && i.data.id === postId
