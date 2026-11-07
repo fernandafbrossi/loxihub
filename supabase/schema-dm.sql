@@ -52,7 +52,11 @@ drop policy if exists "Apagam próprias mensagens" on public.dm_mensagens;
 create policy "Apagam próprias mensagens" on public.dm_mensagens for delete using (auth.uid() = criado_por);
 
 -- Realtime
-alter publication supabase_realtime add table public.dm_mensagens;
+do $$ begin
+  if not exists (select 1 from pg_publication_tables where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'dm_mensagens') then
+    alter publication supabase_realtime add table public.dm_mensagens;
+  end if;
+end $$;
 
 -- Atualiza ordenação da lista + notifica a outra usuária (push sai pelo webhook de notificacoes)
 create or replace function public.notify_nova_dm()
