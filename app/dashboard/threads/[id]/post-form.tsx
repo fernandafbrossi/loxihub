@@ -3,8 +3,10 @@
 import { useState, useRef, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
-import { Send, ChevronDown, Bold, Italic, Underline, Strikethrough } from 'lucide-react'
+import { Send, ChevronDown, Bold, Italic, Underline, Strikethrough, Plus, Check } from 'lucide-react'
 import { RichTextEditor, type RichTextEditorHandle } from '@/components/rich-text-editor'
+import { BottomSheet } from '@/components/bottom-sheet'
+import { CenaForm } from './cena-form'
 
 const LAST_PERSONAGEM_KEY = 'loxihub_last_personagem_id'
 
@@ -19,6 +21,7 @@ interface PostFormProps {
   threadId: string
   personagemPrincipal: string
   personagens: Personagem[]
+  lugares: { id: string; nome: string; lat: number | null; lng: number | null }[]
 }
 
 function Avatar({ p, size = 5 }: { p: { nome: string; foto_url: string | null }; size?: number }) {
@@ -63,7 +66,11 @@ function GroupLabel({ label }: { label: string }) {
 
 const DRAFT_KEY = (threadId: string) => `loxihub_draft_${threadId}`
 
-export function PostForm({ threadId, personagemPrincipal, personagens }: PostFormProps) {
+export function PostForm({ threadId, personagemPrincipal, personagens, lugares }: PostFormProps) {
+  const [cenaOpen, setCenaOpen] = useState(false)
+  const [sheetOpen, setSheetOpen] = useState(false)
+  const [focused, setFocused] = useState(false)
+  const [activeFmts, setActiveFmts] = useState<string[]>([])
   const [conteudo, setConteudo] = useState(() => {
     if (typeof window === 'undefined') return ''
     return localStorage.getItem(DRAFT_KEY(threadId)) ?? ''
@@ -158,11 +165,67 @@ export function PostForm({ threadId, personagemPrincipal, personagens }: PostFor
 
   const povNome = selectedPersonagem?.nome ?? 'Narrador'
 
+  const keepFocus = {
+    onPointerDown: (e: React.PointerEvent) => e.preventDefault(),
+    onMouseDown: (e: React.MouseEvent) => e.preventDefault(),
+  }
+
+  const formatButtons = ([['bold', Bold, 'Negrito'], ['italic', Italic, 'Itálico'], ['underline', Underline, 'Sublinhado'], ['strikethrough', Strikethrough, 'Riscado']] as const).map(([fmt, Icon, label]) => {
+    const active = activeFmts.includes(FORMAT_MARKERS[fmt])
+    return (
+      <button
+        key={fmt}
+        type="button"
+        aria-label={label}
+        aria-pressed={active}
+        title={label}
+        {...keepFocus}
+        onClick={() => applyFormat(fmt)}
+        className="w-11 h-9 md:w-auto md:h-auto md:p-1.5 rounded-lg md:rounded-md flex items-center justify-center transition-colors"
+        style={{
+          background: active ? 'var(--primary)' : 'var(--p-07)',
+          color: active ? 'var(--primary-foreground)' : 'var(--primary)',
+        }}
+      >
+        <Icon size={16} />
+      </button>
+    )
+  })
+
+  function renderPersonagemRow(p: Personagem, muted: boolean, onPick: () => void, big: boolean) {
+    return (
+      <button
+        key={p.id}
+        type="button"
+        onClick={onPick}
+        className={`flex items-center gap-3 w-full text-left transition-colors hover:opacity-80 ${big ? 'px-3 py-2.5 rounded-xl' : 'px-3 py-2'}`}
+        style={{ background: selectedPersonagem?.id === p.id ? 'var(--p-08)' : 'transparent' }}
+      >
+        <Avatar p={p} size={big ? 9 : 6} />
+        <span
+          className={big ? 'text-sm' : 'text-xs'}
+          style={{ color: muted ? 'var(--foreground-muted)' : 'var(--foreground)', fontWeight: muted ? 400 : 500 }}
+        >
+          {p.nome}
+        </span>
+        {big && selectedPersonagem?.id === p.id && <Check size={16} className="ml-auto" style={{ color: 'var(--primary)' }} />}
+      </button>
+    )
+  }
+
   return (
+    <>
+    <CenaForm
+      threadId={threadId}
+      personagens={personagens}
+      lugares={lugares}
+      open={cenaOpen}
+      onOpenChange={setCenaOpen}
+    />
     <form onSubmit={handleSubmit}>
 
-      {/* Seletor de personagem */}
-      <div className="relative mb-2" ref={dropdownRef}>
+      {/* Seletor de personagem — desktop (dropdown) */}
+      <div className="relative mb-2 hidden md:block" ref={dropdownRef}>
         <button
           type="button"
           onClick={() => setDropdownOpen(o => !o)}
@@ -192,42 +255,18 @@ export function PostForm({ threadId, personagemPrincipal, personagens }: PostFor
             {principais.length > 0 && (
               <>
                 <GroupLabel label="Personagens principais" />
-                {principais.map(p => (
-                  <button
-                    key={p.id}
-                    type="button"
-                    onClick={() => selectPersonagem(p)}
-                    className="flex items-center gap-2.5 w-full px-3 py-2 text-left transition-colors hover:opacity-80"
-                    style={{ background: selectedPersonagem?.id === p.id ? 'var(--p-08)' : 'transparent' }}
-                  >
-                    <Avatar p={p} size={6} />
-                    <span className="text-xs font-medium" style={{ color: 'var(--foreground)' }}>{p.nome}</span>
-                  </button>
-                ))}
+                {principais.map(p => renderPersonagemRow(p, false, () => selectPersonagem(p), false))}
               </>
             )}
-
             {npcs.length > 0 && (
               <>
                 {principais.length > 0 && (
                   <div style={{ height: 1, background: 'var(--p-08)', margin: '4px 12px' }} />
                 )}
                 <GroupLabel label="NPCs" />
-                {npcs.map(p => (
-                  <button
-                    key={p.id}
-                    type="button"
-                    onClick={() => selectPersonagem(p)}
-                    className="flex items-center gap-2.5 w-full px-3 py-2 text-left transition-colors hover:opacity-80"
-                    style={{ background: selectedPersonagem?.id === p.id ? 'var(--p-08)' : 'transparent' }}
-                  >
-                    <Avatar p={p} size={6} />
-                    <span className="text-xs" style={{ color: 'var(--foreground-muted)' }}>{p.nome}</span>
-                  </button>
-                ))}
+                {npcs.map(p => renderPersonagemRow(p, true, () => selectPersonagem(p), false))}
               </>
             )}
-
             {personagens.length === 0 && (
               <p className="px-3 py-2 text-xs" style={{ color: 'var(--foreground-muted)' }}>
                 Nenhum personagem criado ainda.
@@ -237,55 +276,102 @@ export function PostForm({ threadId, personagemPrincipal, personagens }: PostFor
         )}
       </div>
 
-      {/* Toolbar de formatação */}
-      <div className="flex gap-1.5 mb-2">
-        {([['bold', Bold, 'Negrito'], ['italic', Italic, 'Itálico'], ['underline', Underline, 'Sublinhado'], ['strikethrough', Strikethrough, 'Riscado']] as const).map(([fmt, Icon, label]) => (
-          <button
-            key={fmt}
-            type="button"
-            title={label}
-            onClick={() => applyFormat(fmt)}
-            className="p-2.5 md:p-1.5 rounded-md transition-opacity hover:opacity-70"
-            style={{ background: 'var(--p-07)', color: 'var(--primary)' }}
-          >
-            <Icon size={14} />
-          </button>
-        ))}
-      </div>
+      {/* Toolbar de formatação — desktop (sempre visível) */}
+      <div className="hidden md:flex gap-1.5 mb-2">{formatButtons}</div>
 
-      {/* Área de texto + botão */}
-      <div
-        className="flex gap-2 items-end rounded-xl px-4 py-3"
-        style={{
-          background: 'rgba(255,255,255,0.65)',
-          border: '0.5px solid var(--p-12)',
-          boxShadow: '0 2px 12px rgba(40,5,15,0.05)',
-        }}
-      >
-        <div className="flex-1 min-w-0">
-          <RichTextEditor
-            ref={editorRef}
-            value={conteudo}
-            onChange={setConteudo}
-            onSubmit={() => handleSubmit({ preventDefault: () => {} } as React.FormEvent)}
-            placeholder={`Escreva como ${povNome}...`}
-            style={{ color: 'var(--foreground)', fontSize: 14, lineHeight: '1.5' }}
-          />
+      {/* Faixa de formatação — mobile (só com o campo em foco) */}
+      {focused && (
+        <div className="md:hidden flex items-center gap-1.5 mb-2 px-1">{formatButtons}</div>
+      )}
+
+      {/* Barra de escrita: ＋  [avatar + campo]  enviar */}
+      <div className="flex items-end gap-2">
+        <button
+          type="button"
+          aria-label="Contexto de cena"
+          {...keepFocus}
+          onClick={() => setCenaOpen(true)}
+          className="md:hidden flex-shrink-0 w-11 h-11 rounded-full flex items-center justify-center"
+          style={{ background: 'var(--p-10)', color: 'var(--primary)' }}
+        >
+          <Plus size={20} />
+        </button>
+
+        <div
+          className="flex-1 min-w-0 flex items-end gap-2 rounded-3xl md:rounded-xl pl-1.5 pr-4 md:px-4 py-1.5 md:py-3"
+          style={{
+            background: 'rgba(255,255,255,0.65)',
+            border: '0.5px solid var(--p-12)',
+            boxShadow: '0 2px 12px rgba(40,5,15,0.05)',
+          }}
+        >
+          <button
+            type="button"
+            aria-label={`Falando como ${povNome}. Trocar personagem`}
+            {...keepFocus}
+            onClick={() => setSheetOpen(true)}
+            className="md:hidden flex-shrink-0 w-9 h-9 flex items-center justify-center"
+          >
+            {selectedPersonagem
+              ? <Avatar p={selectedPersonagem} size={8} />
+              : <div className="w-8 h-8 rounded-full" style={{ background: 'var(--p-15)' }} />
+            }
+          </button>
+
+          <div
+            className="flex-1 min-w-0 py-2 md:py-0 text-base md:text-sm"
+            style={{ lineHeight: '1.4', color: 'var(--foreground)' }}
+          >
+            <RichTextEditor
+              ref={editorRef}
+              value={conteudo}
+              onChange={setConteudo}
+              onSubmit={() => handleSubmit({ preventDefault: () => {} } as React.FormEvent)}
+              onFocusChange={setFocused}
+              onActiveFormatsChange={setActiveFmts}
+              placeholder={`Escreva como ${povNome}...`}
+              style={{ color: 'var(--foreground)', maxHeight: '10rem' }}
+            />
+          </div>
         </div>
 
         <button
           type="submit"
+          aria-label="Enviar"
           disabled={loading || !conteudo.trim()}
-          className="flex-shrink-0 w-11 h-11 md:w-8 md:h-8 rounded-xl md:rounded-lg flex items-center justify-center disabled:opacity-30 transition-opacity hover:opacity-80"
+          {...keepFocus}
+          className="flex-shrink-0 w-11 h-11 md:w-8 md:h-8 rounded-full md:rounded-lg flex items-center justify-center disabled:opacity-30 transition-opacity hover:opacity-80"
           style={{ background: 'var(--btn-primary)', color: 'var(--primary-foreground)' }}
         >
-          <Send size={15} />
+          <Send size={16} />
         </button>
       </div>
 
       <p className="hidden md:block text-[10px] mt-1.5 ml-1" style={{ color: 'var(--muted-light)' }}>
         Ctrl+Enter para enviar
       </p>
+
+      {/* Seletor de personagem — mobile (bottom sheet) */}
+      <BottomSheet open={sheetOpen} onClose={() => setSheetOpen(false)} title="Falar como">
+        {principais.length > 0 && (
+          <>
+            <GroupLabel label="Personagens principais" />
+            {principais.map(p => renderPersonagemRow(p, false, () => { selectPersonagem(p); setSheetOpen(false) }, true))}
+          </>
+        )}
+        {npcs.length > 0 && (
+          <>
+            <GroupLabel label="NPCs" />
+            {npcs.map(p => renderPersonagemRow(p, true, () => { selectPersonagem(p); setSheetOpen(false) }, true))}
+          </>
+        )}
+        {personagens.length === 0 && (
+          <p className="px-3 py-2 text-sm" style={{ color: 'var(--foreground-muted)' }}>
+            Nenhum personagem criado ainda.
+          </p>
+        )}
+      </BottomSheet>
     </form>
+    </>
   )
 }

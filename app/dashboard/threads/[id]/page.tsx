@@ -4,7 +4,6 @@ import Link from 'next/link'
 import { Tag, Hash, Pencil, CalendarDays } from 'lucide-react'
 import { PostForm } from './post-form'
 import { PostsList } from './posts-list'
-import { CenaForm } from './cena-form'
 import { ThreadHistory } from './thread-history'
 import { ThreadSidebar } from './thread-sidebar'
 import { OpenSidebarButton } from './open-sidebar-button'
@@ -87,14 +86,14 @@ export default async function ThreadPage({ params }: { params: Promise<{ id: str
         {/* Header mobile */}
         <div
           className="md:hidden flex-shrink-0 flex items-center gap-2 px-4"
-          style={{ paddingTop: 52, paddingBottom: 14, borderBottom: '0.5px solid rgba(128,0,32,0.08)' }}
+          style={{ paddingTop: 52, paddingBottom: 14, borderBottom: '0.5px solid var(--p-08)' }}
         >
-          <Hash size={13} style={{ color: '#906070', flexShrink: 0 }} />
+          <Hash size={13} style={{ color: 'var(--foreground-muted)', flexShrink: 0 }} />
           <OpenSidebarButton titulo={thread.titulo} />
           <Link
             href={`/dashboard/threads/${id}/editar`}
             className="ml-auto flex-shrink-0 p-1 rounded-lg hover:opacity-70 transition-opacity"
-            style={{ color: '#906070' }}
+            style={{ color: 'var(--foreground-muted)' }}
           >
             <Pencil size={16} />
           </Link>
@@ -103,36 +102,36 @@ export default async function ThreadPage({ params }: { params: Promise<{ id: str
         {/* Header desktop */}
         <div
           className="hidden md:flex px-6 py-4 flex-shrink-0 items-start justify-between gap-4"
-          style={{ borderBottom: '0.5px solid rgba(128,0,32,0.08)' }}
+          style={{ borderBottom: '0.5px solid var(--p-08)' }}
         >
           <div>
             <div className="flex items-center gap-2 mb-0.5">
-              <Hash size={14} style={{ color: '#906070' }} />
-              <h1 className="text-sm font-medium" style={{ color: '#2E0510' }}>{thread.titulo}</h1>
+              <Hash size={14} style={{ color: 'var(--foreground-muted)' }} />
+              <h1 className="text-sm font-medium" style={{ color: 'var(--foreground)' }}>{thread.titulo}</h1>
               <span
                 className="text-[9px] font-medium px-2 py-0.5 rounded-full"
-                style={{ background: 'rgba(128,0,32,0.08)', color: '#906070' }}
+                style={{ background: 'var(--p-08)', color: 'var(--foreground-muted)' }}
               >
                 {statusLabel[thread.status] ?? thread.status}
               </span>
             </div>
             {thread.descricao && (
-              <p className="text-xs ml-5" style={{ color: '#906070' }}>{thread.descricao}</p>
+              <p className="text-xs ml-5" style={{ color: 'var(--foreground-muted)' }}>{thread.descricao}</p>
             )}
             {thread.data_na_historia && (
               <div className="flex items-center gap-1 mt-1 ml-5">
-                <CalendarDays size={10} style={{ color: '#B09098' }} />
-                <span className="text-[10px]" style={{ color: '#906070' }}>
+                <CalendarDays size={10} style={{ color: 'var(--muted-light)' }} />
+                <span className="text-[10px]" style={{ color: 'var(--foreground-muted)' }}>
                   {new Date(thread.data_na_historia + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })}
                 </span>
               </div>
             )}
             {thread.tags && thread.tags.length > 0 && (
               <div className="flex items-center gap-1.5 mt-1.5 ml-5 flex-wrap">
-                <Tag size={10} style={{ color: '#B09098' }} />
+                <Tag size={10} style={{ color: 'var(--muted-light)' }} />
                 {thread.tags.map((tag: string) => (
                   <span key={tag} className="text-[10px] px-2 py-0.5 rounded-full"
-                    style={{ background: 'rgba(128,0,32,0.07)', color: '#906070' }}>
+                    style={{ background: 'var(--p-07)', color: 'var(--foreground-muted)' }}>
                     {tag}
                   </span>
                 ))}
@@ -144,7 +143,7 @@ export default async function ThreadPage({ params }: { params: Promise<{ id: str
             <Link
               href={`/dashboard/threads/${id}/editar`}
               className="flex items-center gap-1.5 text-[11px] px-3 py-1.5 rounded-lg transition-opacity hover:opacity-70"
-              style={{ background: 'rgba(128,0,32,0.07)', color: '#800020' }}
+              style={{ background: 'var(--p-07)', color: 'var(--primary)' }}
             >
               <Pencil size={12} /> Editar
             </Link>
@@ -164,17 +163,17 @@ export default async function ThreadPage({ params }: { params: Promise<{ id: str
         {/* Form */}
         {thread.status === 'em_andamento' && (
           <div
-            className="flex-shrink-0 px-4 md:px-6 py-4"
+            className="flex-shrink-0 px-3 md:px-6 pt-2 md:pt-4"
             style={{
-              borderTop: '0.5px solid rgba(128,0,32,0.08)',
-              paddingBottom: 'max(16px, env(safe-area-inset-bottom))',
+              borderTop: '0.5px solid var(--p-08)',
+              paddingBottom: 'max(10px, env(safe-area-inset-bottom))',
             }}
           >
-            <CenaForm threadId={id} personagens={personagens ?? []} lugares={lugares ?? []} />
             <PostForm
               threadId={id}
               personagemPrincipal=""
               personagens={personagens ?? []}
+              lugares={lugares ?? []}
             />
           </div>
         )}
@@ -182,9 +181,9 @@ export default async function ThreadPage({ params }: { params: Promise<{ id: str
         {thread.status !== 'em_andamento' && (
           <div
             className="flex-shrink-0 px-6 py-3 text-center"
-            style={{ borderTop: '0.5px solid rgba(128,0,32,0.08)' }}
+            style={{ borderTop: '0.5px solid var(--p-08)' }}
           >
-            <p className="text-xs" style={{ color: '#B09098' }}>
+            <p className="text-xs" style={{ color: 'var(--muted-light)' }}>
               Esta thread está {statusLabel[thread.status]} — novos posts desativados.
             </p>
           </div>
