@@ -446,7 +446,7 @@ export function PostsList({ items, userId, personagens, threadId }: PostsListPro
                       </div>
                     </div>
                   ) : (
-                    <div className="text-[15px] leading-[1.5] md:text-[13.5px] md:leading-[1.45] text-left md:text-justify">
+                    <div className="text-[15px] leading-[1.5] md:text-[13.5px] md:leading-[1.45] text-justify">
                       <MarkdownText
                         text={post.conteudo}
                         style={{ fontFamily: "'Segoe UI', system-ui, sans-serif", fontSize: 'inherit', lineHeight: 'inherit', fontWeight: 400, color: 'var(--foreground)', display: 'block', textAlign: 'inherit' }}
