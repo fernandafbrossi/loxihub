@@ -1,4 +1,4 @@
-const CACHE = 'loxihub-v2';
+const CACHE = 'loxihub-v3';
 
 self.addEventListener('install', (e) => {
   self.skipWaiting();
@@ -55,6 +55,16 @@ self.addEventListener('fetch', (e) => {
     );
     return;
   }
+
+  // Só assets estáticos entram no cache. Páginas, dados RSC (router.refresh,
+  // prefetch) e tudo dinâmico vão direto para a rede — antes eram cacheados e
+  // serviam conteúdo velho (posts antigos) ao voltar para a aba.
+  const isStatic =
+    url.origin === self.location.origin &&
+    (url.pathname.startsWith('/_next/static/') ||
+      /\.(png|jpg|jpeg|svg|ico|webp|woff2?)$/.test(url.pathname)) &&
+    !url.searchParams.has('_rsc');
+  if (!isStatic) return;
 
   // Assets estáticos: cache first, rede como fallback
   e.respondWith(
