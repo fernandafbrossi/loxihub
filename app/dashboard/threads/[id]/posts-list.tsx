@@ -270,15 +270,15 @@ export function PostsList({ items, userId, personagens, threadId }: PostsListPro
   // Sync com o servidor quando router.refresh() atualiza os props.
   // Faz merge (em vez de substituir) para não perder um post que chegou por
   // realtime enquanto o refresh ainda carregava dados mais antigos.
+  // A lista nunca encolhe por causa de um refresh: se o servidor devolver menos
+  // itens (ex.: sessão reautenticando ao voltar para a aba), os que já estão na
+  // tela são mantidos. Remoções chegam pelo realtime/ação local (deletedIds).
   useEffect(() => {
     setLocalItems(prev => {
       const serverIds = new Set(items.map(i => i.data.id))
-      const agora = Date.now()
       const extras = prev.filter(i =>
-        i.type === 'post' &&
         !serverIds.has(i.data.id) &&
-        !deletedIds.current.has(i.data.id) &&
-        agora - new Date(i.data.created_at).getTime() < 120_000
+        !deletedIds.current.has(i.data.id)
       )
       const merged = [...items.filter(i => !deletedIds.current.has(i.data.id)), ...extras].sort(
         (a, b) => new Date(a.data.created_at).getTime() - new Date(b.data.created_at).getTime()
@@ -370,6 +370,7 @@ export function PostsList({ items, userId, personagens, threadId }: PostsListPro
   async function handleDeleteContexto(id: string) {
     const supabase = createClient()
     await supabase.from('contextos_cena').delete().eq('id', id)
+    deletedIds.current.add(id)
     setLocalItems(prev => prev.filter(i => i.data.id !== id))
   }
 
