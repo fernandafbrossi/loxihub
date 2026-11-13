@@ -90,9 +90,6 @@ export function SocialClient({
   comentarioCurtidasIniciais = [], postInicialId = null,
   postsMarcados = [], contasMarcadas = [], destaques = [],
 }: Props) {
-  const [seguindoSet, setSeguindoSet] = useState<string[]>(() => {
-    try { return JSON.parse(localStorage.getItem('loxihub:seguindo') ?? '[]') } catch { return [] }
-  })
   const [avisoPerfil, setAvisoPerfil] = useState<string | null>(null)
   const [actingAs, setActingAs] = useState<PersonagemBasic | null>(todosPersonagens[0] ?? null)
   const [pickerOpen, setPickerOpen] = useState(false)
@@ -129,20 +126,11 @@ export function SocialClient({
 
 
   const souEu = actingAs?.id === personagemId
-  const chaveSeguir = actingAs && currentInstagramConta ? `${actingAs.id}>${currentInstagramConta.id}` : null
-  const seguindo = chaveSeguir !== null && seguindoSet.includes(chaveSeguir)
   const botaoSecundario = { background: 'var(--p-07)', color: 'var(--foreground)' }
 
   function avisar(msg: string) {
     setAvisoPerfil(msg)
     setTimeout(() => setAvisoPerfil(null), 2200)
-  }
-
-  function alternarSeguir() {
-    if (!chaveSeguir) return
-    const novo = seguindo ? seguindoSet.filter(k => k !== chaveSeguir) : [...seguindoSet, chaveSeguir]
-    setSeguindoSet(novo)
-    try { localStorage.setItem('loxihub:seguindo', JSON.stringify(novo)) } catch { /* sem storage */ }
   }
 
   async function compartilharPerfil() {
@@ -251,7 +239,7 @@ export function SocialClient({
                 <p className="text-[10px]" style={{ color: 'var(--foreground-muted)' }}>publicações</p>
               </div>
               <div className="text-center">
-                <p className="text-sm font-semibold" style={{ color: 'var(--foreground)' }}>{((currentInstagramConta?.seguidores ?? 0) + (seguindo ? 1 : 0)).toLocaleString('pt-BR')}</p>
+                <p className="text-sm font-semibold" style={{ color: 'var(--foreground)' }}>{(currentInstagramConta?.seguidores ?? 0).toLocaleString('pt-BR')}</p>
                 <p className="text-[10px]" style={{ color: 'var(--foreground-muted)' }}>seguidores</p>
               </div>
               <div className="text-center">
@@ -267,31 +255,17 @@ export function SocialClient({
           )}
 
           {/* Botões do perfil (visuais, como no app real) */}
-          <div className="flex gap-2 mt-3">
-            {souEu ? (
-              <>
-                <Link href={`/dashboard/personagens/${personagemId}/social/editar`}
-                  className="flex-1 h-9 rounded-lg text-xs font-semibold flex items-center justify-center transition-opacity hover:opacity-80"
-                  style={botaoSecundario}>Editar perfil</Link>
-                <button onClick={compartilharPerfil}
-                  className="flex-1 h-9 rounded-lg text-xs font-semibold transition-opacity hover:opacity-80" style={botaoSecundario}>
-                  Compartilhar perfil
-                </button>
-              </>
-            ) : (
-              <>
-                <button onClick={alternarSeguir} disabled={!actingAs}
-                  className="flex-1 h-9 rounded-lg text-xs font-semibold flex items-center justify-center gap-1 transition-opacity hover:opacity-80 disabled:opacity-40"
-                  style={seguindo ? botaoSecundario : { background: 'var(--btn-primary)', color: 'var(--primary-foreground)' }}>
-                  {seguindo ? <>Seguindo <ChevronDown size={12} /></> : 'Seguir'}
-                </button>
-                <button onClick={() => avisar('Mensagens diretas em breve')}
-                  className="flex-1 h-9 rounded-lg text-xs font-semibold transition-opacity hover:opacity-80" style={botaoSecundario}>
-                  Mensagem
-                </button>
-              </>
-            )}
-          </div>
+          {souEu && (
+            <div className="flex gap-2 mt-3">
+              <Link href={`/dashboard/personagens/${personagemId}/social/editar`}
+                className="flex-1 h-9 rounded-lg text-xs font-semibold flex items-center justify-center transition-opacity hover:opacity-80"
+                style={botaoSecundario}>Editar perfil</Link>
+              <button onClick={compartilharPerfil}
+                className="flex-1 h-9 rounded-lg text-xs font-semibold transition-opacity hover:opacity-80" style={botaoSecundario}>
+                Compartilhar perfil
+              </button>
+            </div>
+          )}
           {avisoPerfil && <p className="text-[11px] mt-2" style={{ color: 'var(--foreground-muted)' }}>{avisoPerfil}</p>}
         </div>
       )}
