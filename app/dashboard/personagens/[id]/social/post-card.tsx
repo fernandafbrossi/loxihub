@@ -18,6 +18,8 @@ interface Props {
   post: Post
   /** 'duas-colunas' (desktop: foto ao lado dos comentários) ou 'feed' (celular: tudo em coluna). */
   layout: 'duas-colunas' | 'feed'
+  /** Post de outro personagem (aba Marcadas): sem editar/excluir. */
+  somenteLeitura?: boolean
   personagem: { id: string; nome: string; foto_url: string | null }
   conta: Conta | null
   handle: string
@@ -67,7 +69,7 @@ function lerSalvos(): string[] {
 
 export function PostCard(props: Props) {
   const {
-    post, layout, personagem, conta, handle, eng, curtidas, comentarios, comentarioCurtidas,
+    post, layout, somenteLeitura = false, personagem, conta, handle, eng, curtidas, comentarios, comentarioCurtidas,
     actingAs, todosPersonagens, erro,
     onToggleCurtida, onCurtirComentario, onComentar, onDeleteComentario, onDelete, onSalvar, onEngagement,
   } = props
@@ -181,7 +183,7 @@ export function PostCard(props: Props) {
         <p className="text-xs font-semibold leading-none truncate" style={{ color: 'var(--foreground)' }}>{personagem.nome}</p>
         <p className="text-[10px] mt-1 truncate" style={pequeno}>{handle}</p>
       </div>
-      <div className="relative">
+      {!somenteLeitura && <div className="relative">
         <button onClick={() => setMenuAberto(v => !v)} aria-label="Mais opções" aria-expanded={menuAberto}
           className="w-10 h-10 -mr-2 rounded-full flex items-center justify-center transition-colors hover:bg-black/5"
           style={{ color: 'var(--foreground)' }}>
@@ -205,7 +207,7 @@ export function PostCard(props: Props) {
             </div>
           </>
         )}
-      </div>
+      </div>}
     </div>
   )
 
@@ -346,8 +348,8 @@ export function PostCard(props: Props) {
 
   const numeros = (
     <div className="flex items-center gap-4 mb-1 opacity-80">
-      <EditableNum value={eng.curtidas} icon={<Heart size={12} style={{ color: '#C09098' }} />} label="curtidas extras" onSave={v => onEngagement(post.id, 'curtidas', v)} />
-      <EditableNum value={eng.comentarios} icon={<MessageCircle size={12} style={{ color: '#C09098' }} />} label="comentários extras" onSave={v => onEngagement(post.id, 'comentarios', v)} />
+      <EditableNum value={eng.curtidas} icon={<Heart size={12} style={{ color: '#C09098' }} />} label="curtidas" onSave={v => onEngagement(post.id, 'curtidas', v)} />
+      <EditableNum value={eng.comentarios} icon={<MessageCircle size={12} style={{ color: '#C09098' }} />} label="comentários" onSave={v => onEngagement(post.id, 'comentarios', v)} />
     </div>
   )
 

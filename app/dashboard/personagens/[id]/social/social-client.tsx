@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from 'react'
 import Link from 'next/link'
 import { InstagramTab } from './instagram-tab'
 import { ArrowLeft, Settings, ChevronDown, Plus } from 'lucide-react'
+import { Destaques, type Destaque } from './destaques'
 
 export interface PersonagemBasic {
   id: string
@@ -57,6 +58,7 @@ export interface Post {
   tipo: string | null
   data_post: string | null
   conta_id: string | null
+  personagem_id?: string
 }
 
 interface Personagem {
@@ -71,6 +73,9 @@ interface Props {
   personagem: Personagem
   contas: Conta[]
   posts: Post[]
+  postsMarcados?: Post[]
+  contasMarcadas?: Conta[]
+  destaques?: Destaque[]
   userId: string
   todosPersonagens: PersonagemBasic[]
   curtidasIniciais: Curtida[]
@@ -83,7 +88,12 @@ export function SocialClient({
   personagemId, personagem, contas: initialContas, posts, userId,
   todosPersonagens, curtidasIniciais, comentariosIniciais,
   comentarioCurtidasIniciais = [], postInicialId = null,
+  postsMarcados = [], contasMarcadas = [], destaques = [],
 }: Props) {
+  const [seguindoSet, setSeguindoSet] = useState<string[]>(() => {
+    try { return JSON.parse(localStorage.getItem('loxihub:seguindo') ?? '[]') } catch { return [] }
+  })
+  const [avisoPerfil, setAvisoPerfil] = useState<string | null>(null)
   const [actingAs, setActingAs] = useState<PersonagemBasic | null>(todosPersonagens[0] ?? null)
   const [pickerOpen, setPickerOpen] = useState(false)
   const pickerRef = useRef<HTMLDivElement>(null)
@@ -117,6 +127,32 @@ export function SocialClient({
     return () => document.removeEventListener('mousedown', handler)
   }, [])
 
+
+  const souEu = actingAs?.id === personagemId
+  const chaveSeguir = actingAs && currentInstagramConta ? `${actingAs.id}>${currentInstagramConta.id}` : null
+  const seguindo = chaveSeguir !== null && seguindoSet.includes(chaveSeguir)
+  const botaoSecundario = { background: 'var(--p-07)', color: 'var(--foreground)' }
+
+  function avisar(msg: string) {
+    setAvisoPerfil(msg)
+    setTimeout(() => setAvisoPerfil(null), 2200)
+  }
+
+  function alternarSeguir() {
+    if (!chaveSeguir) return
+    const novo = seguindo ? seguindoSet.filter(k => k !== chaveSeguir) : [...seguindoSet, chaveSeguir]
+    setSeguindoSet(novo)
+    try { localStorage.setItem('loxihub:seguindo', JSON.stringify(novo)) } catch { /* sem storage */ }
+  }
+
+  async function compartilharPerfil() {
+    const url = `${window.location.origin}/dashboard/personagens/${personagemId}/social`
+    try {
+      if (navigator.share) { await navigator.share({ url }); return }
+      await navigator.clipboard.writeText(url)
+      avisar('Link do perfil copiado')
+    } catch { /* cancelado */ }
+  }
 
   const handle = currentConta?.username
     ? `@${currentConta.username}`
@@ -215,7 +251,7 @@ export function SocialClient({
                 <p className="text-[10px]" style={{ color: 'var(--foreground-muted)' }}>publicações</p>
               </div>
               <div className="text-center">
-                <p className="text-sm font-semibold" style={{ color: 'var(--foreground)' }}>{(currentInstagramConta?.seguidores ?? 0).toLocaleString('pt-BR')}</p>
+                <p className="text-sm font-semibold" style={{ color: 'var(--foreground)' }}>{((currentInstagramConta?.seguidores ?? 0) + (seguindo ? 1 : 0)).toLocaleString('pt-BR')}</p>
                 <p className="text-[10px]" style={{ color: 'var(--foreground-muted)' }}>seguidores</p>
               </div>
               <div className="text-center">
@@ -229,7 +265,41 @@ export function SocialClient({
           {currentInstagramConta?.bio && (
             <p className="text-xs mt-1 leading-relaxed" style={{ color: 'var(--foreground)' }}>{currentInstagramConta.bio}</p>
           )}
+
+          {/* Botões do perfil (visuais, como no app real) */}
+          <div className="flex gap-2 mt-3">
+            {souEu ? (
+              <>
+                <Link href={`/dashboard/personagens/${personagemId}/social/editar`}
+                  className="flex-1 h-9 rounded-lg text-xs font-semibold flex items-center justify-center transition-opacity hover:opacity-80"
+                  style={botaoSecundario}>Editar perfil</Link>
+                <button onClick={compartilharPerfil}
+                  className="flex-1 h-9 rounded-lg text-xs font-semibold transition-opacity hover:opacity-80" style={botaoSecundario}>
+                  Compartilhar perfil
+                </button>
+              </>
+            ) : (
+              <>
+                <button onClick={alternarSeguir} disabled={!actingAs}
+                  className="flex-1 h-9 rounded-lg text-xs font-semibold flex items-center justify-center gap-1 transition-opacity hover:opacity-80 disabled:opacity-40"
+                  style={seguindo ? botaoSecundario : { background: 'var(--btn-primary)', color: 'var(--primary-foreground)' }}>
+                  {seguindo ? <>Seguindo <ChevronDown size={12} /></> : 'Seguir'}
+                </button>
+                <button onClick={() => avisar('Mensagens diretas em breve')}
+                  className="flex-1 h-9 rounded-lg text-xs font-semibold transition-opacity hover:opacity-80" style={botaoSecundario}>
+                  Mensagem
+                </button>
+              </>
+            )}
+          </div>
+          {avisoPerfil && <p className="text-[11px] mt-2" style={{ color: 'var(--foreground-muted)' }}>{avisoPerfil}</p>}
         </div>
+      )}
+
+      {/* ── Destaques ── */}
+      {currentInstagramConta && (
+        <Destaques key={currentInstagramConta.id} contaId={currentInstagramConta.id}
+          iniciais={destaques.filter(d => d.conta_id === currentInstagramConta.id)} />
       )}
 
       {/* ── Seletores de conta + nova conta ── */}
@@ -257,7 +327,7 @@ export function SocialClient({
 
       {/* ── Conteúdo da aba ── */}
       <div className="px-4 pt-3 pb-8">
-        <InstagramTab {...commonTabProps} currentConta={currentInstagramConta} allPosts={instagramPosts} onNewPostRef={fn => { instagramNewPostFnRef.current = fn }} />
+        <InstagramTab {...commonTabProps} currentConta={currentInstagramConta} allPosts={instagramPosts} postsMarcados={postsMarcados} contasMarcadas={contasMarcadas} onNewPostRef={fn => { instagramNewPostFnRef.current = fn }} />
       </div>
     </div>
     </div>

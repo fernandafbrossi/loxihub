@@ -3,7 +3,7 @@
 import { useEffect, useState, useSyncExternalStore } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
-import { X, Heart, MessageCircle, Layers, ArrowLeft } from 'lucide-react'
+import { X, Heart, MessageCircle, Layers, ArrowLeft, Grid3x3, SquareUser } from 'lucide-react'
 import { MultiImageUpload } from '@/components/multi-image-upload'
 import { getMidias, pathNoStorage, slugNome } from '@/lib/social-utils'
 import { PostCard } from './post-card'
@@ -16,6 +16,8 @@ interface Props {
   personagem: Personagem
   currentConta: Conta | null
   allPosts: Post[]
+  postsMarcados?: Post[]
+  contasMarcadas?: Conta[]
   userId: string
   actingAs: PersonagemBasic | null
   todosPersonagens: PersonagemBasic[]
@@ -44,6 +46,7 @@ export function InstagramTab({
   personagemId, personagem, currentConta, allPosts,
   actingAs, todosPersonagens, curtidas: initCurtidas, comentarios: initComentarios,
   comentarioCurtidas: initComentarioCurtidas = [], postInicialId = null,
+  postsMarcados = [], contasMarcadas = [],
   onNewPostRef,
 }: Props) {
   const [showForm, setShowForm] = useState(false)
@@ -51,6 +54,7 @@ export function InstagramTab({
   const [legenda, setLegenda] = useState('')
   const [dataPost, setDataPost] = useState(nowLocalStr())
   const [loading, setLoading] = useState(false)
+  const [aba, setAba] = useState<'posts' | 'marcadas'>('posts')
   const [selectedId, setSelectedId] = useState<string | null>(postInicialId)
   const [saveError, setSaveError] = useState<string | null>(null)
 
@@ -60,7 +64,7 @@ export function InstagramTab({
 
   const [engagements, setEngagements] = useState<Record<string, Eng>>(() => {
     const init: Record<string, Eng> = {}
-    for (const p of allPosts) init[p.id] = { curtidas: p.curtidas ?? 0, comentarios: p.comentarios ?? 0 }
+    for (const p of [...allPosts, ...postsMarcados]) init[p.id] = { curtidas: p.curtidas ?? 0, comentarios: p.comentarios ?? 0 }
     return init
   })
   const [curtidas, setCurtidas] = useState<Curtida[]>(initCurtidas)
@@ -68,6 +72,14 @@ export function InstagramTab({
   const [comentarioCurtidas, setComentarioCurtidas] = useState<ComentarioCurtida[]>(initComentarioCurtidas)
 
   const router = useRouter()
+
+  // Fecha o post e tira o ?post= da URL (vindo de notificação ou link compartilhado).
+  function fechar() {
+    setSelectedId(null)
+    if (new URL(window.location.href).searchParams.has('post')) {
+      window.history.replaceState(null, '', window.location.pathname)
+    }
+  }
   const isDesktop = useSyncExternalStore(
     assinarDesktop,
     () => window.matchMedia(MQ_DESKTOP).matches,
@@ -82,7 +94,9 @@ export function InstagramTab({
     .filter(p => !removidos.includes(p.id))
     .map(p => ({ ...p, ...edicoes[p.id] }))
 
-  const selected = posts.find(p => p.id === selectedId) ?? null
+  const marcadas: Post[] = postsMarcados.filter(p => !removidos.includes(p.id)).map(p => ({ ...p, ...edicoes[p.id] }))
+  const lista = aba === 'marcadas' ? marcadas : posts
+  const selected = [...posts, ...marcadas].find(p => p.id === selectedId) ?? null
   const aberto = selected !== null
 
   const handle = currentConta?.username
@@ -94,7 +108,7 @@ export function InstagramTab({
     if (!aberto) return
     const anterior = document.body.style.overflow
     document.body.style.overflow = 'hidden'
-    function onKey(e: KeyboardEvent) { if (e.key === 'Escape') setSelectedId(null) }
+    function onKey(e: KeyboardEvent) { if (e.key === 'Escape') fechar() }
     window.addEventListener('keydown', onKey)
     return () => { document.body.style.overflow = anterior; window.removeEventListener('keydown', onKey) }
   }, [aberto])
@@ -136,7 +150,7 @@ export function InstagramTab({
     const caminhos = getMidias(post).map(pathNoStorage).filter((x): x is string => !!x)
     if (caminhos.length) await supabase.storage.from('imagens').remove(caminhos)
     setRemovidos(prev => [...prev, post.id])
-    setSelectedId(null)
+    fechar()
     router.refresh()
   }
 
@@ -219,9 +233,13 @@ export function InstagramTab({
   }
 
   function renderCard(post: Post, layout: 'duas-colunas' | 'feed') {
+    const meu = !post.personagem_id || post.personagem_id === personagemId
+    const autor = meu ? personagem : (todosPersonagens.find(p => p.id === post.personagem_id) ?? personagem)
+    const contaAutor = meu ? currentConta : (contasMarcadas.find(c => c.id === post.conta_id) ?? null)
+    const handleAutor = meu ? handle : `@${contaAutor?.username ?? slugNome(autor.nome)}`
     return (
-      <PostCard key={post.id} post={post} layout={layout}
-        personagem={personagem} conta={currentConta} handle={handle}
+      <PostCard key={post.id} post={post} layout={layout} somenteLeitura={!meu}
+        personagem={autor} conta={contaAutor} handle={handleAutor}
         eng={engagements[post.id] ?? { curtidas: 0, comentarios: 0 }}
         curtidas={curtidas.filter(c => c.post_id === post.id)}
         comentarios={comentarios.filter(c => c.post_id === post.id)}
@@ -283,12 +301,32 @@ export function InstagramTab({
         </div>
       )}
 
+      {/* Abas */}
+      <div className="flex mb-3" style={{ borderBottom: '0.5px solid var(--p-08)' }} role="tablist">
+        {([['posts', Grid3x3, 'Publicações'], ['marcadas', SquareUser, 'Marcadas']] as const).map(([id, Icone, rotulo]) => (
+          <button key={id} role="tab" aria-selected={aba === id} aria-label={rotulo} onClick={() => setAba(id)}
+            className="flex-1 h-11 flex items-center justify-center transition-colors"
+            style={{
+              color: aba === id ? 'var(--foreground)' : 'var(--muted-light)',
+              borderBottom: aba === id ? '1.5px solid var(--foreground)' : '1.5px solid transparent',
+              marginBottom: -1,
+            }}>
+            <Icone size={22} />
+          </button>
+        ))}
+      </div>
+
       {/* Grid (3:4, como no Instagram atual) */}
-      {posts.length === 0 ? (
-        <div className="text-center py-10 opacity-50"><p className="text-sm" style={{ color: 'var(--foreground-muted)' }}>Nenhuma publicação ainda</p></div>
+      {lista.length === 0 ? (
+        <div className="text-center py-10 opacity-50">
+          <p className="text-sm" style={{ color: 'var(--foreground-muted)' }}>
+            {aba === 'marcadas' ? 'Nenhuma publicação com este perfil marcado' : 'Nenhuma publicação ainda'}
+          </p>
+          {aba === 'marcadas' && <p className="text-xs mt-1" style={{ color: 'var(--muted-light)' }}>Aparecem aqui os posts de outros personagens que mencionam @{currentConta.username ?? slugNome(personagem.nome)}</p>}
+        </div>
       ) : (
         <div className="grid grid-cols-3 gap-0.5 rounded-xl overflow-hidden">
-          {posts.map(post => {
+          {lista.map(post => {
             const eng = engagements[post.id] ?? { curtidas: 0, comentarios: 0 }
             const totalCurtidas = curtidas.filter(c => c.post_id === post.id).length + eng.curtidas
             const totalComentarios = comentarios.filter(c => c.post_id === post.id).length + eng.comentarios
@@ -318,8 +356,8 @@ export function InstagramTab({
       {selected && isDesktop && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-6"
           style={{ background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(4px)' }}
-          onClick={() => setSelectedId(null)}>
-          <button onClick={() => setSelectedId(null)} aria-label="Fechar"
+          onClick={fechar}>
+          <button onClick={fechar} aria-label="Fechar"
             className="absolute top-4 right-4 w-11 h-11 rounded-full flex items-center justify-center transition-opacity hover:opacity-80"
             style={{ background: 'rgba(255,255,255,0.15)' }}>
             <X size={22} color="#fff" />
@@ -336,13 +374,13 @@ export function InstagramTab({
         <div className="fixed inset-0 z-50 overflow-y-auto" style={{ background: 'rgba(250,247,248,0.99)' }}>
           <div className="sticky top-0 z-30 flex items-center gap-1 h-12 px-1"
             style={{ background: 'rgba(250,247,248,0.97)', borderBottom: '0.5px solid var(--p-08)', backdropFilter: 'blur(8px)' }}>
-            <button onClick={() => setSelectedId(null)} aria-label="Voltar"
+            <button onClick={fechar} aria-label="Voltar"
               className="w-11 h-11 flex items-center justify-center" style={{ color: 'var(--foreground)' }}>
               <ArrowLeft size={22} />
             </button>
             <p className="text-sm font-semibold" style={{ color: 'var(--foreground)' }}>Publicações</p>
           </div>
-          {posts.map(p => (
+          {lista.map(p => (
             <div key={p.id} id={`post-${p.id}`} style={{ scrollMarginTop: 48, borderBottom: '0.5px solid var(--p-08)' }}>
               {renderCard(p, 'feed')}
             </div>
