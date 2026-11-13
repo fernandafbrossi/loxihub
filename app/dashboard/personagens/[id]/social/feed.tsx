@@ -48,11 +48,11 @@ export function SocialFeed({ posts, personagem, userId }: Props) {
         className="rounded-2xl py-10 text-center"
         style={{
           background: 'rgba(255,255,255,0.40)',
-          border: '0.5px solid rgba(128,0,32,0.06)',
+          border: '0.5px solid var(--p-06)',
         }}
       >
-        <p className="text-sm" style={{ color: '#906070' }}>Nenhum post ainda</p>
-        <p className="text-xs mt-1" style={{ color: '#B09098' }}>Seja o primeiro a postar no feed</p>
+        <p className="text-sm" style={{ color: 'var(--foreground-muted)' }}>Nenhum post ainda</p>
+        <p className="text-xs mt-1" style={{ color: 'var(--muted-light)' }}>Seja o primeiro a postar no feed</p>
       </div>
     )
   }
@@ -72,8 +72,8 @@ export function SocialFeed({ posts, personagem, userId }: Props) {
             key={post.id}
             className="rounded-2xl overflow-hidden group"
             style={{
-              background: 'rgba(255,255,255,0.60)',
-              border: '0.5px solid rgba(128,0,32,0.08)',
+              background: 'var(--card)',
+              border: '0.5px solid var(--p-08)',
             }}
           >
             {/* Header do post */}
@@ -82,7 +82,7 @@ export function SocialFeed({ posts, personagem, userId }: Props) {
                 className="w-9 h-9 rounded-full overflow-hidden flex-shrink-0 flex items-center justify-center text-xs font-semibold"
                 style={{
                   background: 'linear-gradient(135deg, #800020, #5C0018)',
-                  color: '#FAF0F2',
+                  color: 'var(--primary-foreground)',
                 }}
               >
                 {personagem.foto_url ? (
@@ -92,10 +92,10 @@ export function SocialFeed({ posts, personagem, userId }: Props) {
                 )}
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium leading-none" style={{ color: '#2E0510' }}>
+                <p className="text-sm font-medium leading-none" style={{ color: 'var(--foreground)' }}>
                   {personagem.nome}
                 </p>
-                <p className="text-[11px] mt-0.5" style={{ color: '#B09098' }}>
+                <p className="text-[11px] mt-0.5" style={{ color: 'var(--muted-light)' }}>
                   {handle} · {data} às {hora}
                 </p>
               </div>
@@ -103,7 +103,7 @@ export function SocialFeed({ posts, personagem, userId }: Props) {
                 onClick={() => handleDelete(post.id)}
                 disabled={deletingId === post.id}
                 className="opacity-60 md:opacity-0 md:group-hover:opacity-100 transition-opacity p-1.5 rounded-lg hover:opacity-60 disabled:opacity-20"
-                style={{ color: '#906070' }}
+                style={{ color: 'var(--foreground-muted)' }}
                 title="Excluir post"
               >
                 <Trash2 size={13} />
@@ -113,7 +113,7 @@ export function SocialFeed({ posts, personagem, userId }: Props) {
             {/* Conteúdo */}
             <p
               className="px-4 text-sm leading-relaxed whitespace-pre-wrap"
-              style={{ color: '#2E0510', paddingBottom: post.midia_url ? 12 : 16 }}
+              style={{ color: 'var(--foreground)', paddingBottom: post.midia_url ? 12 : 16 }}
             >
               {post.conteudo}
             </p>

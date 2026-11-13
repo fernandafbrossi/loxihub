@@ -53,9 +53,9 @@ export function SocialPostForm({ personagemId, personagem }: { personagemId: str
       <div
         className="rounded-2xl p-4 transition-all"
         style={{
-          background: 'rgba(255,255,255,0.60)',
-          border: `0.5px solid ${focused ? 'rgba(128,0,32,0.20)' : 'rgba(128,0,32,0.08)'}`,
-          boxShadow: focused ? '0 4px 16px rgba(128,0,32,0.08)' : 'none',
+          background: 'var(--card)',
+          border: `0.5px solid ${focused ? 'var(--p-20)' : 'var(--p-08)'}`,
+          boxShadow: focused ? '0 4px 16px var(--p-08)' : 'none',
         }}
       >
         <div className="flex gap-3">
@@ -64,7 +64,7 @@ export function SocialPostForm({ personagemId, personagem }: { personagemId: str
             className="w-9 h-9 rounded-full overflow-hidden flex-shrink-0 flex items-center justify-center text-xs font-semibold"
             style={{
               background: 'linear-gradient(135deg, #800020, #5C0018)',
-              color: '#FAF0F2',
+              color: 'var(--primary-foreground)',
             }}
           >
             {personagem.foto_url ? (
@@ -82,7 +82,7 @@ export function SocialPostForm({ personagemId, personagem }: { personagemId: str
               placeholder={`O que ${personagem.nome} está pensando?`}
               rows={focused ? 3 : 1}
               className="w-full text-sm outline-none resize-none bg-transparent leading-relaxed"
-              style={{ color: '#2E0510' }}
+              style={{ color: 'var(--foreground)' }}
             />
 
             {showImagem && (
@@ -93,15 +93,15 @@ export function SocialPostForm({ personagemId, personagem }: { personagemId: str
 
             {focused && (
               <div className="flex items-center justify-between mt-3 pt-3"
-                style={{ borderTop: '0.5px solid rgba(128,0,32,0.08)' }}>
+                style={{ borderTop: '0.5px solid var(--p-08)' }}>
                 <div className="flex items-center gap-2">
                   <button
                     type="button"
                     onClick={() => setShowImagem(v => !v)}
                     className="flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-lg transition-opacity hover:opacity-70"
                     style={{
-                      background: showImagem ? 'rgba(128,0,32,0.10)' : 'transparent',
-                      color: '#906070',
+                      background: showImagem ? 'var(--p-10)' : 'transparent',
+                      color: 'var(--foreground-muted)',
                     }}
                   >
                     {showImagem ? <X size={12} /> : <ImageIcon size={12} />}
@@ -113,7 +113,7 @@ export function SocialPostForm({ personagemId, personagem }: { personagemId: str
                     type="button"
                     onClick={() => { setFocused(false); setConteudo(''); setMidiaUrl(''); setShowImagem(false) }}
                     className="text-xs px-3 py-1.5 rounded-lg transition-opacity hover:opacity-70"
-                    style={{ color: '#906070' }}
+                    style={{ color: 'var(--foreground-muted)' }}
                   >
                     Cancelar
                   </button>
@@ -121,7 +121,7 @@ export function SocialPostForm({ personagemId, personagem }: { personagemId: str
                     type="submit"
                     disabled={loading || !conteudo.trim()}
                     className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg disabled:opacity-40 transition-opacity hover:opacity-80"
-                    style={{ background: '#800020', color: '#FAF0F2' }}
+                    style={{ background: 'var(--btn-primary)', color: 'var(--primary-foreground)' }}
                   >
                     <Send size={11} /> {loading ? 'Postando...' : 'Postar'}
                   </button>

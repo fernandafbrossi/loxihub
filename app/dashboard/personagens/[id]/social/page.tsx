@@ -2,8 +2,12 @@ import { createClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
 import { SocialClient } from './social-client'
 
-export default async function SocialPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function SocialPage({ params, searchParams }: {
+  params: Promise<{ id: string }>
+  searchParams: Promise<{ post?: string }>
+}) {
   const { id } = await params
+  const { post: postInicialId } = await searchParams
   const supabase = await createClient()
 
   const [
@@ -27,14 +31,19 @@ export default async function SocialPage({ params }: { params: Promise<{ id: str
     { data: todosPersonagens },
     { data: curtidas },
     { data: comentarios },
+    { data: comentarioCurtidas },
   ] = await Promise.all([
     supabase.auth.getUser(),
-    supabase.from('personagens').select('id, nome, foto_url').order('nome'),
+    supabase.from('personagens').select('id, nome, foto_url, username').order('nome'),
     postIds.length > 0
       ? supabase.from('curtidas_sociais').select('*').in('post_id', postIds)
       : Promise.resolve({ data: [] }),
     postIds.length > 0
       ? supabase.from('comentarios_sociais').select('*, personagens(id, nome, foto_url)').in('post_id', postIds).order('created_at', { ascending: true })
+      : Promise.resolve({ data: [] }),
+    // Tabela criada em schema-curtidas-comentarios.sql; se ainda não existir, vem vazio.
+    postIds.length > 0
+      ? supabase.from('curtidas_comentarios_sociais').select('id, comentario_id, personagem_id')
       : Promise.resolve({ data: [] }),
   ])
 
@@ -49,6 +58,8 @@ export default async function SocialPage({ params }: { params: Promise<{ id: str
         todosPersonagens={todosPersonagens ?? []}
         curtidasIniciais={curtidas ?? []}
         comentariosIniciais={comentarios ?? []}
+        comentarioCurtidasIniciais={comentarioCurtidas ?? []}
+        postInicialId={postInicialId ?? null}
       />
     </div>
   )

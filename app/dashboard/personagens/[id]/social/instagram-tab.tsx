@@ -1,12 +1,13 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState, useSyncExternalStore } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
-import { X, Trash2, Heart, MessageCircle, Pencil, Check, Send, Layers } from 'lucide-react'
+import { X, Heart, MessageCircle, Layers, ArrowLeft } from 'lucide-react'
 import { MultiImageUpload } from '@/components/multi-image-upload'
-import { PostCarousel } from '@/components/post-carousel'
-import { AccountAvatar, CharAvatar, type PersonagemBasic, type Curtida, type Comentario, type Conta, type Post } from './social-client'
+import { getMidias, pathNoStorage, slugNome } from '@/lib/social-utils'
+import { PostCard } from './post-card'
+import type { PersonagemBasic, Curtida, Comentario, ComentarioCurtida, Conta, Post } from './social-client'
 
 interface Personagem { id: string; nome: string; foto_url: string | null }
 
@@ -20,84 +21,90 @@ interface Props {
   todosPersonagens: PersonagemBasic[]
   curtidas: Curtida[]
   comentarios: Comentario[]
+  comentarioCurtidas?: ComentarioCurtida[]
+  postInicialId?: string | null
   onNewPostRef?: (fn: () => void) => void
 }
 
-function EditableNum({ value, icon, label, onSave }: { value: number; icon: React.ReactNode; label: string; onSave: (n: number) => void }) {
-  const [editing, setEditing] = useState(false)
-  const [draft, setDraft] = useState(String(value))
-  function commit() { onSave(parseInt(draft) || 0); setEditing(false) }
-  return (
-    <div className="flex items-center gap-1.5">
-      {icon}
-      {editing ? (
-        <input type="number" min={0} value={draft} onChange={e => setDraft(e.target.value)}
-          onBlur={commit} onKeyDown={e => { if (e.key === 'Enter') commit(); if (e.key === 'Escape') setEditing(false) }}
-          autoFocus className="w-12 text-xs text-center outline-none rounded px-1"
-          style={{ background: 'var(--p-07)', border: '0.5px solid var(--p-20)', color: 'var(--foreground)' }} />
-      ) : (
-        <button onClick={() => { setDraft(String(value)); setEditing(true) }} className="text-xs font-medium hover:underline" style={{ color: 'var(--foreground)' }}>
-          {value.toLocaleString('pt-BR')}
-        </button>
-      )}
-      <span className="text-xs" style={{ color: 'var(--muted-light)' }}>{label}</span>
-    </div>
-  )
-}
-
-function getMidias(p: Post): string[] {
-  if (p.midia_urls && p.midia_urls.length > 0) return p.midia_urls
-  return p.midia_url ? [p.midia_url] : []
-}
-
-// Extrai o caminho no bucket 'imagens' a partir da URL pública.
-function pathNoStorage(url: string): string | null {
-  const m = url.match(/\/object\/public\/imagens\/(.+?)(?:\?|$)/)
-  return m ? decodeURIComponent(m[1]) : null
-}
+type Eng = { curtidas: number; comentarios: number }
 
 function nowLocalStr() {
   const d = new Date(); d.setMinutes(d.getMinutes() - d.getTimezoneOffset())
   return d.toISOString().slice(0, 16)
 }
 
+const MQ_DESKTOP = '(min-width: 768px)'
+function assinarDesktop(cb: () => void) {
+  const mq = window.matchMedia(MQ_DESKTOP)
+  mq.addEventListener('change', cb)
+  return () => mq.removeEventListener('change', cb)
+}
+
 export function InstagramTab({
   personagemId, personagem, currentConta, allPosts,
   actingAs, todosPersonagens, curtidas: initCurtidas, comentarios: initComentarios,
+  comentarioCurtidas: initComentarioCurtidas = [], postInicialId = null,
   onNewPostRef,
 }: Props) {
   const [showForm, setShowForm] = useState(false)
   const [midias, setMidias] = useState<string[]>([])
-  const [editMidias, setEditMidias] = useState<string[]>([])
   const [legenda, setLegenda] = useState('')
   const [dataPost, setDataPost] = useState(nowLocalStr())
   const [loading, setLoading] = useState(false)
-  const [selected, setSelected] = useState<Post | null>(null)
-  const [deletingId, setDeletingId] = useState<string | null>(null)
-  const [editingCaption, setEditingCaption] = useState(false)
-  const [editCaption, setEditCaption] = useState('')
-  const [novoComentario, setNovoComentario] = useState('')
-  const [enviandoComentario, setEnviandoComentario] = useState(false)
+  const [selectedId, setSelectedId] = useState<string | null>(postInicialId)
   const [saveError, setSaveError] = useState<string | null>(null)
 
-  const [engagements, setEngagements] = useState<Record<string, { curtidas: number; comentarios: number }>>(() => {
-    const init: Record<string, any> = {}
+  // Alterações locais enquanto o servidor ainda não devolveu os dados atualizados.
+  const [edicoes, setEdicoes] = useState<Record<string, Partial<Post>>>({})
+  const [removidos, setRemovidos] = useState<string[]>([])
+
+  const [engagements, setEngagements] = useState<Record<string, Eng>>(() => {
+    const init: Record<string, Eng> = {}
     for (const p of allPosts) init[p.id] = { curtidas: p.curtidas ?? 0, comentarios: p.comentarios ?? 0 }
     return init
   })
   const [curtidas, setCurtidas] = useState<Curtida[]>(initCurtidas)
   const [comentarios, setComentarios] = useState<Comentario[]>(initComentarios)
+  const [comentarioCurtidas, setComentarioCurtidas] = useState<ComentarioCurtida[]>(initComentarioCurtidas)
 
   const router = useRouter()
+  const isDesktop = useSyncExternalStore(
+    assinarDesktop,
+    () => window.matchMedia(MQ_DESKTOP).matches,
+    () => true,
+  )
 
   // expõe setShowForm para o pai via ref callback
   if (onNewPostRef) onNewPostRef(() => setShowForm(true))
 
-  const posts = allPosts.filter(p => p.conta_id === currentConta?.id || (!p.conta_id && p.tipo === 'instagram'))
+  const posts: Post[] = allPosts
+    .filter(p => p.conta_id === currentConta?.id || (!p.conta_id && p.tipo === 'instagram'))
+    .filter(p => !removidos.includes(p.id))
+    .map(p => ({ ...p, ...edicoes[p.id] }))
+
+  const selected = posts.find(p => p.id === selectedId) ?? null
+  const aberto = selected !== null
 
   const handle = currentConta?.username
     ? `@${currentConta.username}`
-    : `@${personagem.nome.toLowerCase().replace(/\s+/g, '_')}`
+    : `@${slugNome(personagem.nome)}`
+
+  // Trava a rolagem da página e fecha com Esc enquanto o post está aberto.
+  useEffect(() => {
+    if (!aberto) return
+    const anterior = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    function onKey(e: KeyboardEvent) { if (e.key === 'Escape') setSelectedId(null) }
+    window.addEventListener('keydown', onKey)
+    return () => { document.body.style.overflow = anterior; window.removeEventListener('keydown', onKey) }
+  }, [aberto])
+
+  // No celular, o feed abre já rolado até o post escolhido.
+  useEffect(() => {
+    if (aberto && !isDesktop && selectedId) {
+      document.getElementById(`post-${selectedId}`)?.scrollIntoView({ block: 'start' })
+    }
+  }, [aberto, isDesktop, selectedId])
 
   async function handlePost() {
     if (midias.length === 0 || !currentConta) return
@@ -122,39 +129,35 @@ export function InstagramTab({
     router.refresh()
   }
 
-  async function handleDelete(id: string) {
-    setDeletingId(id)
+  async function handleDelete(post: Post) {
     const supabase = createClient()
-    const post = posts.find(p => p.id === id)
-    await supabase.from('posts_sociais').delete().eq('id', id)
-    if (post) {
-      const caminhos = getMidias(post).map(pathNoStorage).filter((x): x is string => !!x)
-      if (caminhos.length) await supabase.storage.from('imagens').remove(caminhos)
-    }
-    setSelected(null); router.refresh(); setDeletingId(null)
+    const { error } = await supabase.from('posts_sociais').delete().eq('id', post.id)
+    if (error) { setSaveError('Erro ao apagar: ' + error.message); return }
+    const caminhos = getMidias(post).map(pathNoStorage).filter((x): x is string => !!x)
+    if (caminhos.length) await supabase.storage.from('imagens').remove(caminhos)
+    setRemovidos(prev => [...prev, post.id])
+    setSelectedId(null)
+    router.refresh()
   }
 
-  async function updateEngagement(postId: string, field: 'curtidas' | 'comentarios', value: number) {
+  async function handleSalvar(post: Post, novaLegenda: string, novasMidias: string[]): Promise<string | null> {
+    const supabase = createClient()
+    const { error } = await supabase.from('posts_sociais')
+      .update({ conteudo: novaLegenda, midia_url: novasMidias[0], midia_urls: novasMidias }).eq('id', post.id)
+    if (error) return 'Erro ao salvar: ' + error.message
+    const removidas = getMidias(post).filter(u => !novasMidias.includes(u)).map(pathNoStorage).filter((x): x is string => !!x)
+    if (removidas.length) await supabase.storage.from('imagens').remove(removidas)
+    setEdicoes(prev => ({ ...prev, [post.id]: { conteudo: novaLegenda, midia_url: novasMidias[0], midia_urls: novasMidias } }))
+    router.refresh()
+    return null
+  }
+
+  async function updateEngagement(postId: string, field: keyof Eng, value: number) {
     setSaveError(null)
     setEngagements(prev => ({ ...prev, [postId]: { ...prev[postId], [field]: value } }))
-    if (selected?.id === postId) setSelected(s => s ? { ...s, [field]: value } : s)
     const supabase = createClient()
     const { error } = await supabase.from('posts_sociais').update({ [field]: value }).eq('id', postId)
     if (error) setSaveError('Erro ao salvar: ' + error.message)
-  }
-
-  async function saveCaption(postId: string) {
-    const supabase = createClient()
-    if (editMidias.length === 0) { setSaveError('O post precisa de pelo menos uma foto.'); return }
-    setSaveError(null)
-    const antigas = selected ? getMidias(selected) : []
-    const { error } = await supabase.from('posts_sociais')
-      .update({ conteudo: editCaption.trim(), midia_url: editMidias[0], midia_urls: editMidias }).eq('id', postId)
-    if (error) { setSaveError('Erro ao salvar: ' + error.message); return }
-    const removidas = antigas.filter(u => !editMidias.includes(u)).map(pathNoStorage).filter((x): x is string => !!x)
-    if (removidas.length) await supabase.storage.from('imagens').remove(removidas)
-    setSelected(s => s ? { ...s, conteudo: editCaption.trim(), midia_url: editMidias[0], midia_urls: editMidias } : s)
-    setEditingCaption(false); router.refresh()
   }
 
   async function toggleCurtida(postId: string) {
@@ -173,16 +176,31 @@ export function InstagramTab({
     }
   }
 
-  async function enviarComentario(postId: string) {
-    if (!actingAs || !novoComentario.trim()) return
-    setEnviandoComentario(true)
+  async function curtirComentario(comentarioId: string) {
+    if (!actingAs) return
+    const supabase = createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    const existing = comentarioCurtidas.find(c => c.comentario_id === comentarioId && c.personagem_id === actingAs.id)
+    if (existing) {
+      await supabase.from('curtidas_comentarios_sociais').delete().eq('id', existing.id)
+      setComentarioCurtidas(prev => prev.filter(c => c.id !== existing.id))
+    } else {
+      const { data, error } = await supabase.from('curtidas_comentarios_sociais')
+        .insert({ comentario_id: comentarioId, personagem_id: actingAs.id, criado_por: user?.id })
+        .select('id, comentario_id, personagem_id').single()
+      if (error) setSaveError('Não foi possível curtir o comentário (rode schema-curtidas-comentarios.sql no Supabase).')
+      else if (data) setComentarioCurtidas(prev => [...prev, data])
+    }
+  }
+
+  async function enviarComentario(postId: string, texto: string) {
+    if (!actingAs) return
     const supabase = createClient()
     const { data: { user } } = await supabase.auth.getUser()
     const { data } = await supabase.from('comentarios_sociais')
-      .insert({ post_id: postId, personagem_id: actingAs.id, conteudo: novoComentario.trim(), criado_por: user?.id })
+      .insert({ post_id: postId, personagem_id: actingAs.id, conteudo: texto, criado_por: user?.id })
       .select('*, personagens(id, nome, foto_url)').single()
     if (data) setComentarios(prev => [...prev, data])
-    setNovoComentario(''); setEnviandoComentario(false)
   }
 
   async function deletarComentario(comentarioId: string) {
@@ -200,9 +218,31 @@ export function InstagramTab({
     )
   }
 
+  function renderCard(post: Post, layout: 'duas-colunas' | 'feed') {
+    return (
+      <PostCard key={post.id} post={post} layout={layout}
+        personagem={personagem} conta={currentConta} handle={handle}
+        eng={engagements[post.id] ?? { curtidas: 0, comentarios: 0 }}
+        curtidas={curtidas.filter(c => c.post_id === post.id)}
+        comentarios={comentarios.filter(c => c.post_id === post.id)}
+        comentarioCurtidas={comentarioCurtidas}
+        actingAs={actingAs} todosPersonagens={todosPersonagens} erro={post.id === selectedId ? saveError : null}
+        onToggleCurtida={toggleCurtida} onCurtirComentario={curtirComentario}
+        onComentar={enviarComentario} onDeleteComentario={deletarComentario}
+        onDelete={handleDelete} onSalvar={handleSalvar} onEngagement={updateEngagement} />
+    )
+  }
+
   return (
     <div>
-      {saveError && (
+      <style>{`@keyframes heartPop {
+        0% { transform: scale(0.4); opacity: 0 }
+        20% { transform: scale(1.15); opacity: 1 }
+        40% { transform: scale(0.95) }
+        100% { transform: scale(1.1); opacity: 0 }
+      }`}</style>
+
+      {saveError && !aberto && (
         <p className="text-[11px] mb-3 px-2 py-1.5 rounded-lg" style={{ background: 'rgba(192,0,0,0.08)', color: 'var(--destructive)' }}>
           {saveError}
         </p>
@@ -213,7 +253,8 @@ export function InstagramTab({
         <div className="rounded-2xl p-5 mb-5" style={{ background: 'rgba(255,255,255,0.65)', border: '0.5px solid var(--p-12)' }}>
           <div className="flex items-center justify-between mb-4">
             <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--foreground-muted)' }}>Nova publicação</p>
-            <button onClick={() => { setShowForm(false); setMidias([]); setLegenda('') }} style={{ color: 'var(--muted-light)' }}><X size={14} /></button>
+            <button onClick={() => { setShowForm(false); setMidias([]); setLegenda('') }} aria-label="Fechar"
+              className="w-8 h-8 flex items-center justify-center" style={{ color: 'var(--muted-light)' }}><X size={16} /></button>
           </div>
           <div className="mb-4">
             <p className="text-[10px] font-medium uppercase tracking-wider mb-2" style={{ color: 'var(--foreground-muted)' }}>Fotos * (até 10)</p>
@@ -221,7 +262,7 @@ export function InstagramTab({
           </div>
           <div className="mb-4">
             <p className="text-[10px] font-medium uppercase tracking-wider mb-2" style={{ color: 'var(--foreground-muted)' }}>Legenda</p>
-            <textarea value={legenda} onChange={e => setLegenda(e.target.value)} placeholder="Escreva uma legenda..." rows={3}
+            <textarea value={legenda} onChange={e => setLegenda(e.target.value)} placeholder="Escreva uma legenda... use #hashtags e @menções" rows={3}
               className="w-full text-sm outline-none resize-none rounded-xl px-3 py-2.5"
               style={{ background: 'rgba(255,255,255,0.70)', border: '0.5px solid var(--p-12)', color: 'var(--foreground)' }} />
           </div>
@@ -233,34 +274,33 @@ export function InstagramTab({
           </div>
           <div className="flex gap-2">
             <button onClick={() => { setShowForm(false); setMidias([]); setLegenda('') }}
-              className="flex-1 py-2 rounded-xl text-xs transition-opacity hover:opacity-70"
+              className="flex-1 py-2.5 rounded-xl text-xs transition-opacity hover:opacity-70"
               style={{ background: 'var(--p-07)', color: 'var(--foreground-muted)' }}>Cancelar</button>
             <button onClick={handlePost} disabled={loading || midias.length === 0}
-              className="flex-1 py-2 rounded-xl text-xs font-medium disabled:opacity-40 transition-opacity hover:opacity-80"
+              className="flex-1 py-2.5 rounded-xl text-xs font-medium disabled:opacity-40 transition-opacity hover:opacity-80"
               style={{ background: 'var(--btn-primary)', color: 'var(--primary-foreground)' }}>{loading ? 'Publicando...' : 'Publicar'}</button>
           </div>
         </div>
       )}
 
-      {/* Grid */}
+      {/* Grid (3:4, como no Instagram atual) */}
       {posts.length === 0 ? (
         <div className="text-center py-10 opacity-50"><p className="text-sm" style={{ color: 'var(--foreground-muted)' }}>Nenhuma publicação ainda</p></div>
       ) : (
         <div className="grid grid-cols-3 gap-0.5 rounded-xl overflow-hidden">
           {posts.map(post => {
             const eng = engagements[post.id] ?? { curtidas: 0, comentarios: 0 }
-            const postCurtidas = curtidas.filter(c => c.post_id === post.id)
-            const postComentarios = comentarios.filter(c => c.post_id === post.id)
-            const totalCurtidas = postCurtidas.length + eng.curtidas
-            const totalComentarios = postComentarios.length + eng.comentarios
+            const totalCurtidas = curtidas.filter(c => c.post_id === post.id).length + eng.curtidas
+            const totalComentarios = comentarios.filter(c => c.post_id === post.id).length + eng.comentarios
+            const fotos = getMidias(post)
             return (
-              <button key={post.id} onClick={() => { setSelected(post); setEditingCaption(false); setSaveError(null) }}
-                className="relative aspect-square overflow-hidden group" style={{ background: 'var(--p-06)' }}>
-                {post.midia_url
-                  ? <img src={getMidias(post)[0]} alt="" className="w-full h-full object-cover transition-transform group-hover:scale-105" />
+              <button key={post.id} onClick={() => { setSelectedId(post.id); setSaveError(null) }}
+                className="relative overflow-hidden group" style={{ background: 'var(--p-06)', aspectRatio: '3 / 4' }}>
+                {fotos.length > 0
+                  ? <img src={fotos[0]} alt="" className="w-full h-full object-cover transition-transform group-hover:scale-105" />
                   : <div className="w-full h-full flex items-center justify-center text-3xl" style={{ color: '#C09098' }}>{personagem.nome[0]}</div>
                 }
-                {getMidias(post).length > 1 && (
+                {fotos.length > 1 && (
                   <Layers size={16} color="#fff" className="absolute top-1.5 right-1.5 drop-shadow" />
                 )}
                 <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3"
@@ -274,129 +314,41 @@ export function InstagramTab({
         </div>
       )}
 
-      {/* Modal */}
-      {selected && (() => {
-        const eng = engagements[selected.id] ?? { curtidas: 0, comentarios: 0 }
-        const postCurtidas = curtidas.filter(c => c.post_id === selected.id)
-        const postComentarios = comentarios.filter(c => c.post_id === selected.id)
-        const jaCurtiu = actingAs ? postCurtidas.some(c => c.personagem_id === actingAs.id) : false
-        const dataLabel = new Date(selected.data_post || selected.created_at).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })
-        const totalCurtidas = postCurtidas.length + eng.curtidas
-
-        return (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
-            style={{ background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(4px)' }}
-            onClick={() => { setSelected(null); setEditingCaption(false) }}>
-            <div className="w-full max-w-sm rounded-2xl overflow-hidden flex flex-col"
-              style={{ background: 'rgba(245,240,242,0.98)', boxShadow: '0 20px 60px rgba(40,5,15,0.30)', maxHeight: '90vh' }}
-              onClick={e => e.stopPropagation()}>
-
-              <div className="flex items-center gap-3 px-4 py-3 flex-shrink-0" style={{ borderBottom: '0.5px solid var(--p-08)' }}>
-                <AccountAvatar conta={currentConta} personagem={personagem} size={32} />
-                <div className="flex-1">
-                  <p className="text-xs font-semibold leading-none" style={{ color: 'var(--foreground)' }}>{personagem.nome}</p>
-                  <p className="text-[10px] mt-0.5" style={{ color: 'var(--muted-light)' }}>{handle}</p>
-                </div>
-                <button onClick={() => { setEditingCaption(true); setEditCaption(selected.conteudo); setEditMidias(getMidias(selected)) }}
-                  className="p-1.5 rounded-lg hover:opacity-60 transition-opacity" style={{ color: 'var(--foreground-muted)' }}><Pencil size={13} /></button>
-                <button onClick={() => handleDelete(selected.id)} disabled={deletingId === selected.id}
-                  className="p-1.5 rounded-lg hover:opacity-60 transition-opacity disabled:opacity-30" style={{ color: 'var(--foreground-muted)' }}><Trash2 size={13} /></button>
-                <button onClick={() => { setSelected(null); setEditingCaption(false) }} style={{ color: 'var(--muted-light)' }}><X size={16} /></button>
-              </div>
-
-              {editingCaption
-                ? <div className="px-4 pt-3 flex-shrink-0"><MultiImageUpload urls={editMidias} onChange={setEditMidias} /></div>
-                : <div className="flex-shrink-0"><PostCarousel key={selected.id} urls={getMidias(selected)} /></div>}
-
-              <div className="px-4 pt-3 pb-2 flex-shrink-0">
-                <div className="flex items-center gap-3 mb-2">
-                  <button onClick={() => toggleCurtida(selected.id)} disabled={!actingAs}
-                    className="transition-transform hover:scale-110 disabled:opacity-40">
-                    <Heart size={20} fill={jaCurtiu ? 'var(--primary)' : 'none'} stroke={jaCurtiu ? 'var(--primary)' : 'var(--foreground-muted)'} />
-                  </button>
-                  <MessageCircle size={20} style={{ color: 'var(--foreground-muted)' }} />
-                </div>
-
-                <div className="flex items-center gap-4 mb-2">
-                  <EditableNum value={eng.curtidas} icon={<Heart size={12} style={{ color: '#C09098' }} />} label="curtidas" onSave={v => updateEngagement(selected.id, 'curtidas', v)} />
-                  <EditableNum value={eng.comentarios} icon={<MessageCircle size={12} style={{ color: '#C09098' }} />} label="comentários" onSave={v => updateEngagement(selected.id, 'comentarios', v)} />
-                </div>
-
-                {postCurtidas.length > 0 && (() => {
-                  const primeiro = todosPersonagens.find(x => x.id === postCurtidas[0].personagem_id)
-                  const totalOutras = (postCurtidas.length - 1) + eng.curtidas
-                  return (
-                    <div className="flex items-center gap-2 mb-2">
-                      <CharAvatar p={primeiro ?? { id: '', nome: '?', foto_url: null }} size={18} />
-                      <p className="text-[11px]" style={{ color: 'var(--foreground)' }}>
-                        Curtido por <span className="font-semibold">{primeiro?.nome ?? '?'}</span>
-                        {totalOutras > 0 && <> e <span className="font-semibold">{totalOutras.toLocaleString('pt-BR')} {totalOutras === 1 ? 'outra pessoa' : 'outras pessoas'}</span></>}
-                      </p>
-                    </div>
-                  )
-                })()}
-
-                {editingCaption ? (
-                  <div className="mb-2">
-                    <textarea value={editCaption} onChange={e => setEditCaption(e.target.value)} rows={3} autoFocus
-                      className="w-full text-xs outline-none resize-none rounded-lg px-2 py-2"
-                      style={{ background: 'rgba(255,255,255,0.70)', border: '0.5px solid var(--p-20)', color: 'var(--foreground)' }} />
-                    <div className="flex gap-2 mt-1">
-                      <button onClick={() => saveCaption(selected.id)} className="flex items-center gap-1 text-[11px] px-2.5 py-1 rounded-lg" style={{ background: 'var(--btn-primary)', color: 'var(--primary-foreground)' }}><Check size={11} /> Salvar</button>
-                      <button onClick={() => setEditingCaption(false)} className="text-[11px] px-2.5 py-1 rounded-lg" style={{ background: 'var(--p-07)', color: 'var(--foreground-muted)' }}>Cancelar</button>
-                    </div>
-                  </div>
-                ) : selected.conteudo ? (
-                  <p className="text-xs leading-relaxed mb-1" style={{ color: 'var(--foreground)' }}>
-                    <span className="font-semibold">{personagem.nome} </span>{selected.conteudo}
-                  </p>
-                ) : null}
-                <p className="text-[10px]" style={{ color: 'var(--muted-light)' }}>{dataLabel}</p>
-                {saveError && <p className="text-[10px] mt-1 px-2 py-1 rounded" style={{ background: 'rgba(192,0,0,0.08)', color: 'var(--destructive)' }}>{saveError}</p>}
-              </div>
-
-              <div className="flex-1 overflow-y-auto px-4 py-2" style={{ borderTop: '0.5px solid var(--p-08)' }}>
-                {postComentarios.length === 0
-                  ? <p className="text-[10px] text-center py-2" style={{ color: 'var(--muted-light)' }}>Sem comentários ainda</p>
-                  : postComentarios.map(c => {
-                    const autor = c.personagens as PersonagemBasic | null
-                    return (
-                      <div key={c.id} className="flex items-start gap-2 py-1.5 group">
-                        {autor && <CharAvatar p={autor} size={22} />}
-                        <div className="flex-1 min-w-0">
-                          <span className="text-[11px] font-semibold" style={{ color: 'var(--foreground)' }}>{autor?.nome ?? '?'} </span>
-                          <span className="text-[11px]" style={{ color: 'var(--foreground)' }}>{c.conteudo}</span>
-                        </div>
-                        <button onClick={() => deletarComentario(c.id)}
-                          className="opacity-60 md:opacity-0 md:group-hover:opacity-100 flex-shrink-0 transition-opacity p-0.5 hover:opacity-60"
-                          style={{ color: 'var(--muted-light)' }}><Trash2 size={11} /></button>
-                      </div>
-                    )
-                  })
-                }
-              </div>
-
-              {actingAs ? (
-                <div className="flex items-center gap-2 px-4 py-3 flex-shrink-0" style={{ borderTop: '0.5px solid var(--p-08)' }}>
-                  <CharAvatar p={actingAs} size={26} />
-                  <input value={novoComentario} onChange={e => setNovoComentario(e.target.value)}
-                    onKeyDown={e => { if (e.key === 'Enter') enviarComentario(selected.id) }}
-                    placeholder={`Comentar como ${actingAs.nome}...`}
-                    className="flex-1 text-xs outline-none bg-transparent" style={{ color: 'var(--foreground)' }} />
-                  <button onClick={() => enviarComentario(selected.id)} disabled={enviandoComentario || !novoComentario.trim()}
-                    className="disabled:opacity-30 transition-opacity hover:opacity-70" style={{ color: 'var(--primary)' }}>
-                    <Send size={15} />
-                  </button>
-                </div>
-              ) : (
-                <p className="text-[10px] text-center py-2 flex-shrink-0" style={{ color: 'var(--muted-light)', borderTop: '0.5px solid var(--p-08)' }}>
-                  Selecione um personagem acima para interagir
-                </p>
-              )}
-            </div>
+      {/* Post aberto: duas colunas no desktop; feed rolável em tela cheia no celular */}
+      {selected && isDesktop && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-6"
+          style={{ background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(4px)' }}
+          onClick={() => setSelectedId(null)}>
+          <button onClick={() => setSelectedId(null)} aria-label="Fechar"
+            className="absolute top-4 right-4 w-11 h-11 rounded-full flex items-center justify-center transition-opacity hover:opacity-80"
+            style={{ background: 'rgba(255,255,255,0.15)' }}>
+            <X size={22} color="#fff" />
+          </button>
+          <div className="rounded-2xl overflow-hidden flex"
+            style={{ boxShadow: '0 20px 60px rgba(40,5,15,0.30)', maxWidth: 1100, maxHeight: '90vh' }}
+            onClick={e => e.stopPropagation()}>
+            {renderCard(selected, 'duas-colunas')}
           </div>
-        )
-      })()}
+        </div>
+      )}
+
+      {selected && !isDesktop && (
+        <div className="fixed inset-0 z-50 overflow-y-auto" style={{ background: 'rgba(250,247,248,0.99)' }}>
+          <div className="sticky top-0 z-30 flex items-center gap-1 h-12 px-1"
+            style={{ background: 'rgba(250,247,248,0.97)', borderBottom: '0.5px solid var(--p-08)', backdropFilter: 'blur(8px)' }}>
+            <button onClick={() => setSelectedId(null)} aria-label="Voltar"
+              className="w-11 h-11 flex items-center justify-center" style={{ color: 'var(--foreground)' }}>
+              <ArrowLeft size={22} />
+            </button>
+            <p className="text-sm font-semibold" style={{ color: 'var(--foreground)' }}>Publicações</p>
+          </div>
+          {posts.map(p => (
+            <div key={p.id} id={`post-${p.id}`} style={{ scrollMarginTop: 48, borderBottom: '0.5px solid var(--p-08)' }}>
+              {renderCard(p, 'feed')}
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   )
 }

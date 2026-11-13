@@ -9,6 +9,13 @@ export interface PersonagemBasic {
   id: string
   nome: string
   foto_url: string | null
+  username?: string | null
+}
+
+export interface ComentarioCurtida {
+  id: string
+  comentario_id: string
+  personagem_id: string
 }
 
 export interface Curtida {
@@ -68,11 +75,14 @@ interface Props {
   todosPersonagens: PersonagemBasic[]
   curtidasIniciais: Curtida[]
   comentariosIniciais: Comentario[]
+  comentarioCurtidasIniciais?: ComentarioCurtida[]
+  postInicialId?: string | null
 }
 
 export function SocialClient({
   personagemId, personagem, contas: initialContas, posts, userId,
   todosPersonagens, curtidasIniciais, comentariosIniciais,
+  comentarioCurtidasIniciais = [], postInicialId = null,
 }: Props) {
   const [actingAs, setActingAs] = useState<PersonagemBasic | null>(todosPersonagens[0] ?? null)
   const [pickerOpen, setPickerOpen] = useState(false)
@@ -81,7 +91,9 @@ export function SocialClient({
   const [contas, setContas] = useState(initialContas)
   const instagramContas = contas.filter(c => c.tipo === 'instagram')
 
-  const [selectedInstagramId, setSelectedInstagramId] = useState<string | null>(instagramContas[0]?.id ?? null)
+  const [selectedInstagramId, setSelectedInstagramId] = useState<string | null>(
+    posts.find(p => p.id === postInicialId)?.conta_id ?? instagramContas[0]?.id ?? null
+  )
   const instagramNewPostFnRef = useRef<(() => void) | null>(null)
 
   const currentInstagramConta = instagramContas.find(c => c.id === selectedInstagramId) ?? instagramContas[0] ?? null
@@ -122,6 +134,8 @@ export function SocialClient({
     todosPersonagens,
     curtidas: curtidasIniciais,
     comentarios: comentariosIniciais,
+    comentarioCurtidas: comentarioCurtidasIniciais,
+    postInicialId,
   }
 
   return (

@@ -57,21 +57,21 @@ function EditableCount({ label, value, onChange }: { label: string; value: numbe
           autoFocus
           className="w-14 text-sm font-semibold outline-none rounded px-1 text-center"
           style={{
-            background: 'rgba(128,0,32,0.07)',
-            border: '0.5px solid rgba(128,0,32,0.20)',
-            color: '#2E0510',
+            background: 'var(--p-07)',
+            border: '0.5px solid var(--p-20)',
+            color: 'var(--foreground)',
           }}
         />
       ) : (
         <button
           onClick={() => { setDraft(String(value)); setEditing(true) }}
           className="text-sm font-semibold hover:underline"
-          style={{ color: '#2E0510' }}
+          style={{ color: 'var(--foreground)' }}
         >
           {value.toLocaleString('pt-BR')}
         </button>
       )}
-      <span className="text-xs" style={{ color: '#906070' }}>{label}</span>
+      <span className="text-xs" style={{ color: 'var(--foreground-muted)' }}>{label}</span>
     </div>
   )
 }
