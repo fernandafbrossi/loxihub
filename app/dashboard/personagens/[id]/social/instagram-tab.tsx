@@ -3,8 +3,9 @@
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
-import { X, Trash2, Heart, MessageCircle, Pencil, Check, Send } from 'lucide-react'
-import { ImageUpload } from '@/components/image-upload'
+import { X, Trash2, Heart, MessageCircle, Pencil, Check, Send, Layers } from 'lucide-react'
+import { MultiImageUpload } from '@/components/multi-image-upload'
+import { PostCarousel } from '@/components/post-carousel'
 import { AccountAvatar, CharAvatar, type PersonagemBasic, type Curtida, type Comentario, type Conta, type Post } from './social-client'
 
 interface Personagem { id: string; nome: string; foto_url: string | null }
@@ -33,15 +34,26 @@ function EditableNum({ value, icon, label, onSave }: { value: number; icon: Reac
         <input type="number" min={0} value={draft} onChange={e => setDraft(e.target.value)}
           onBlur={commit} onKeyDown={e => { if (e.key === 'Enter') commit(); if (e.key === 'Escape') setEditing(false) }}
           autoFocus className="w-12 text-xs text-center outline-none rounded px-1"
-          style={{ background: 'rgba(128,0,32,0.07)', border: '0.5px solid rgba(128,0,32,0.20)', color: '#2E0510' }} />
+          style={{ background: 'var(--p-07)', border: '0.5px solid var(--p-20)', color: 'var(--foreground)' }} />
       ) : (
-        <button onClick={() => { setDraft(String(value)); setEditing(true) }} className="text-xs font-medium hover:underline" style={{ color: '#2E0510' }}>
+        <button onClick={() => { setDraft(String(value)); setEditing(true) }} className="text-xs font-medium hover:underline" style={{ color: 'var(--foreground)' }}>
           {value.toLocaleString('pt-BR')}
         </button>
       )}
-      <span className="text-xs" style={{ color: '#B09098' }}>{label}</span>
+      <span className="text-xs" style={{ color: 'var(--muted-light)' }}>{label}</span>
     </div>
   )
+}
+
+function getMidias(p: Post): string[] {
+  if (p.midia_urls && p.midia_urls.length > 0) return p.midia_urls
+  return p.midia_url ? [p.midia_url] : []
+}
+
+// Extrai o caminho no bucket 'imagens' a partir da URL pública.
+function pathNoStorage(url: string): string | null {
+  const m = url.match(/\/object\/public\/imagens\/(.+?)(?:\?|$)/)
+  return m ? decodeURIComponent(m[1]) : null
 }
 
 function nowLocalStr() {
@@ -55,7 +67,8 @@ export function InstagramTab({
   onNewPostRef,
 }: Props) {
   const [showForm, setShowForm] = useState(false)
-  const [midiaUrl, setMidiaUrl] = useState('')
+  const [midias, setMidias] = useState<string[]>([])
+  const [editMidias, setEditMidias] = useState<string[]>([])
   const [legenda, setLegenda] = useState('')
   const [dataPost, setDataPost] = useState(nowLocalStr())
   const [loading, setLoading] = useState(false)
@@ -87,17 +100,24 @@ export function InstagramTab({
     : `@${personagem.nome.toLowerCase().replace(/\s+/g, '_')}`
 
   async function handlePost() {
-    if (!midiaUrl || !currentConta) return
+    if (midias.length === 0 || !currentConta) return
     setLoading(true)
+    setSaveError(null)
     const supabase = createClient()
     const { data: { user } } = await supabase.auth.getUser()
-    await supabase.from('posts_sociais').insert({
-      personagem_id: personagemId, conteudo: legenda.trim(), midia_url: midiaUrl,
+    const base = {
+      personagem_id: personagemId, conteudo: legenda.trim(), midia_url: midias[0],
       tipo: 'instagram', conta_id: currentConta.id,
       data_post: new Date(dataPost).toISOString(),
       curtidas: 0, comentarios: 0, criado_por: user?.id,
-    })
-    setMidiaUrl(''); setLegenda(''); setShowForm(false)
+    }
+    let { error } = await supabase.from('posts_sociais').insert({ ...base, midia_urls: midias })
+    if (error && /midia_urls/.test(error.message)) {
+      // Migração ainda não rodada: salva só a capa.
+      ;({ error } = await supabase.from('posts_sociais').insert(base))
+    }
+    if (error) { setSaveError('Erro ao publicar: ' + error.message); setLoading(false); return }
+    setMidias([]); setLegenda(''); setShowForm(false)
     setDataPost(nowLocalStr()); setLoading(false)
     router.refresh()
   }
@@ -105,7 +125,12 @@ export function InstagramTab({
   async function handleDelete(id: string) {
     setDeletingId(id)
     const supabase = createClient()
+    const post = posts.find(p => p.id === id)
     await supabase.from('posts_sociais').delete().eq('id', id)
+    if (post) {
+      const caminhos = getMidias(post).map(pathNoStorage).filter((x): x is string => !!x)
+      if (caminhos.length) await supabase.storage.from('imagens').remove(caminhos)
+    }
     setSelected(null); router.refresh(); setDeletingId(null)
   }
 
@@ -120,8 +145,15 @@ export function InstagramTab({
 
   async function saveCaption(postId: string) {
     const supabase = createClient()
-    await supabase.from('posts_sociais').update({ conteudo: editCaption.trim() }).eq('id', postId)
-    setSelected(s => s ? { ...s, conteudo: editCaption.trim() } : s)
+    if (editMidias.length === 0) { setSaveError('O post precisa de pelo menos uma foto.'); return }
+    setSaveError(null)
+    const antigas = selected ? getMidias(selected) : []
+    const { error } = await supabase.from('posts_sociais')
+      .update({ conteudo: editCaption.trim(), midia_url: editMidias[0], midia_urls: editMidias }).eq('id', postId)
+    if (error) { setSaveError('Erro ao salvar: ' + error.message); return }
+    const removidas = antigas.filter(u => !editMidias.includes(u)).map(pathNoStorage).filter((x): x is string => !!x)
+    if (removidas.length) await supabase.storage.from('imagens').remove(removidas)
+    setSelected(s => s ? { ...s, conteudo: editCaption.trim(), midia_url: editMidias[0], midia_urls: editMidias } : s)
     setEditingCaption(false); router.refresh()
   }
 
@@ -162,8 +194,8 @@ export function InstagramTab({
   if (!currentConta) {
     return (
       <div className="text-center py-10 opacity-50">
-        <p className="text-sm" style={{ color: '#906070' }}>Nenhuma conta Instagram ainda</p>
-        <p className="text-xs mt-1" style={{ color: '#B09098' }}>Crie uma conta Instagram em Gerenciar contas</p>
+        <p className="text-sm" style={{ color: 'var(--foreground-muted)' }}>Nenhuma conta Instagram ainda</p>
+        <p className="text-xs mt-1" style={{ color: 'var(--muted-light)' }}>Crie uma conta Instagram em Gerenciar contas</p>
       </div>
     )
   }
@@ -171,48 +203,48 @@ export function InstagramTab({
   return (
     <div>
       {saveError && (
-        <p className="text-[11px] mb-3 px-2 py-1.5 rounded-lg" style={{ background: 'rgba(192,0,0,0.08)', color: '#c0392b' }}>
+        <p className="text-[11px] mb-3 px-2 py-1.5 rounded-lg" style={{ background: 'rgba(192,0,0,0.08)', color: 'var(--destructive)' }}>
           {saveError}
         </p>
       )}
 
       {/* Form */}
       {showForm && (
-        <div className="rounded-2xl p-5 mb-5" style={{ background: 'rgba(255,255,255,0.65)', border: '0.5px solid rgba(128,0,32,0.12)' }}>
+        <div className="rounded-2xl p-5 mb-5" style={{ background: 'rgba(255,255,255,0.65)', border: '0.5px solid var(--p-12)' }}>
           <div className="flex items-center justify-between mb-4">
-            <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: '#906070' }}>Nova publicação</p>
-            <button onClick={() => { setShowForm(false); setMidiaUrl(''); setLegenda('') }} style={{ color: '#B09098' }}><X size={14} /></button>
+            <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--foreground-muted)' }}>Nova publicação</p>
+            <button onClick={() => { setShowForm(false); setMidias([]); setLegenda('') }} style={{ color: 'var(--muted-light)' }}><X size={14} /></button>
           </div>
           <div className="mb-4">
-            <p className="text-[10px] font-medium uppercase tracking-wider mb-2" style={{ color: '#906070' }}>Foto *</p>
-            <ImageUpload onUpload={setMidiaUrl} currentUrl={midiaUrl} />
+            <p className="text-[10px] font-medium uppercase tracking-wider mb-2" style={{ color: 'var(--foreground-muted)' }}>Fotos * (até 10)</p>
+            <MultiImageUpload urls={midias} onChange={setMidias} />
           </div>
           <div className="mb-4">
-            <p className="text-[10px] font-medium uppercase tracking-wider mb-2" style={{ color: '#906070' }}>Legenda</p>
+            <p className="text-[10px] font-medium uppercase tracking-wider mb-2" style={{ color: 'var(--foreground-muted)' }}>Legenda</p>
             <textarea value={legenda} onChange={e => setLegenda(e.target.value)} placeholder="Escreva uma legenda..." rows={3}
               className="w-full text-sm outline-none resize-none rounded-xl px-3 py-2.5"
-              style={{ background: 'rgba(255,255,255,0.70)', border: '0.5px solid rgba(128,0,32,0.12)', color: '#2E0510' }} />
+              style={{ background: 'rgba(255,255,255,0.70)', border: '0.5px solid var(--p-12)', color: 'var(--foreground)' }} />
           </div>
           <div className="mb-5">
-            <p className="text-[10px] font-medium uppercase tracking-wider mb-2" style={{ color: '#906070' }}>Data da publicação</p>
+            <p className="text-[10px] font-medium uppercase tracking-wider mb-2" style={{ color: 'var(--foreground-muted)' }}>Data da publicação</p>
             <input type="datetime-local" value={dataPost} onChange={e => setDataPost(e.target.value)}
               className="text-xs outline-none rounded-xl px-3 py-2"
-              style={{ background: 'rgba(255,255,255,0.70)', border: '0.5px solid rgba(128,0,32,0.12)', color: '#906070' }} />
+              style={{ background: 'rgba(255,255,255,0.70)', border: '0.5px solid var(--p-12)', color: 'var(--foreground-muted)' }} />
           </div>
           <div className="flex gap-2">
-            <button onClick={() => { setShowForm(false); setMidiaUrl(''); setLegenda('') }}
+            <button onClick={() => { setShowForm(false); setMidias([]); setLegenda('') }}
               className="flex-1 py-2 rounded-xl text-xs transition-opacity hover:opacity-70"
-              style={{ background: 'rgba(128,0,32,0.07)', color: '#906070' }}>Cancelar</button>
-            <button onClick={handlePost} disabled={loading || !midiaUrl}
+              style={{ background: 'var(--p-07)', color: 'var(--foreground-muted)' }}>Cancelar</button>
+            <button onClick={handlePost} disabled={loading || midias.length === 0}
               className="flex-1 py-2 rounded-xl text-xs font-medium disabled:opacity-40 transition-opacity hover:opacity-80"
-              style={{ background: '#800020', color: '#FAF0F2' }}>{loading ? 'Publicando...' : 'Publicar'}</button>
+              style={{ background: 'var(--btn-primary)', color: 'var(--primary-foreground)' }}>{loading ? 'Publicando...' : 'Publicar'}</button>
           </div>
         </div>
       )}
 
       {/* Grid */}
       {posts.length === 0 ? (
-        <div className="text-center py-10 opacity-50"><p className="text-sm" style={{ color: '#906070' }}>Nenhuma publicação ainda</p></div>
+        <div className="text-center py-10 opacity-50"><p className="text-sm" style={{ color: 'var(--foreground-muted)' }}>Nenhuma publicação ainda</p></div>
       ) : (
         <div className="grid grid-cols-3 gap-0.5 rounded-xl overflow-hidden">
           {posts.map(post => {
@@ -222,14 +254,17 @@ export function InstagramTab({
             const totalCurtidas = postCurtidas.length + eng.curtidas
             const totalComentarios = postComentarios.length + eng.comentarios
             return (
-              <button key={post.id} onClick={() => { setSelected(post); setEditingCaption(false) }}
-                className="relative aspect-square overflow-hidden group" style={{ background: 'rgba(128,0,32,0.06)' }}>
+              <button key={post.id} onClick={() => { setSelected(post); setEditingCaption(false); setSaveError(null) }}
+                className="relative aspect-square overflow-hidden group" style={{ background: 'var(--p-06)' }}>
                 {post.midia_url
-                  ? <img src={post.midia_url} alt="" className="w-full h-full object-cover transition-transform group-hover:scale-105" />
+                  ? <img src={getMidias(post)[0]} alt="" className="w-full h-full object-cover transition-transform group-hover:scale-105" />
                   : <div className="w-full h-full flex items-center justify-center text-3xl" style={{ color: '#C09098' }}>{personagem.nome[0]}</div>
                 }
+                {getMidias(post).length > 1 && (
+                  <Layers size={16} color="#fff" className="absolute top-1.5 right-1.5 drop-shadow" />
+                )}
                 <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3"
-                  style={{ background: 'rgba(46,5,16,0.40)' }}>
+                  style={{ background: 'var(--fg-40)' }}>
                   <span className="flex items-center gap-1 text-xs font-semibold text-white"><Heart size={14} fill="white" /> {totalCurtidas}</span>
                   <span className="flex items-center gap-1 text-xs font-semibold text-white"><MessageCircle size={14} fill="white" stroke="white" /> {totalComentarios}</span>
                 </div>
@@ -256,28 +291,30 @@ export function InstagramTab({
               style={{ background: 'rgba(245,240,242,0.98)', boxShadow: '0 20px 60px rgba(40,5,15,0.30)', maxHeight: '90vh' }}
               onClick={e => e.stopPropagation()}>
 
-              <div className="flex items-center gap-3 px-4 py-3 flex-shrink-0" style={{ borderBottom: '0.5px solid rgba(128,0,32,0.08)' }}>
+              <div className="flex items-center gap-3 px-4 py-3 flex-shrink-0" style={{ borderBottom: '0.5px solid var(--p-08)' }}>
                 <AccountAvatar conta={currentConta} personagem={personagem} size={32} />
                 <div className="flex-1">
-                  <p className="text-xs font-semibold leading-none" style={{ color: '#2E0510' }}>{personagem.nome}</p>
-                  <p className="text-[10px] mt-0.5" style={{ color: '#B09098' }}>{handle}</p>
+                  <p className="text-xs font-semibold leading-none" style={{ color: 'var(--foreground)' }}>{personagem.nome}</p>
+                  <p className="text-[10px] mt-0.5" style={{ color: 'var(--muted-light)' }}>{handle}</p>
                 </div>
-                <button onClick={() => { setEditingCaption(true); setEditCaption(selected.conteudo) }}
-                  className="p-1.5 rounded-lg hover:opacity-60 transition-opacity" style={{ color: '#906070' }}><Pencil size={13} /></button>
+                <button onClick={() => { setEditingCaption(true); setEditCaption(selected.conteudo); setEditMidias(getMidias(selected)) }}
+                  className="p-1.5 rounded-lg hover:opacity-60 transition-opacity" style={{ color: 'var(--foreground-muted)' }}><Pencil size={13} /></button>
                 <button onClick={() => handleDelete(selected.id)} disabled={deletingId === selected.id}
-                  className="p-1.5 rounded-lg hover:opacity-60 transition-opacity disabled:opacity-30" style={{ color: '#906070' }}><Trash2 size={13} /></button>
-                <button onClick={() => { setSelected(null); setEditingCaption(false) }} style={{ color: '#B09098' }}><X size={16} /></button>
+                  className="p-1.5 rounded-lg hover:opacity-60 transition-opacity disabled:opacity-30" style={{ color: 'var(--foreground-muted)' }}><Trash2 size={13} /></button>
+                <button onClick={() => { setSelected(null); setEditingCaption(false) }} style={{ color: 'var(--muted-light)' }}><X size={16} /></button>
               </div>
 
-              {selected.midia_url && <img src={selected.midia_url} alt="" className="w-full h-auto flex-shrink-0" />}
+              {editingCaption
+                ? <div className="px-4 pt-3 flex-shrink-0"><MultiImageUpload urls={editMidias} onChange={setEditMidias} /></div>
+                : <div className="flex-shrink-0"><PostCarousel key={selected.id} urls={getMidias(selected)} /></div>}
 
               <div className="px-4 pt-3 pb-2 flex-shrink-0">
                 <div className="flex items-center gap-3 mb-2">
                   <button onClick={() => toggleCurtida(selected.id)} disabled={!actingAs}
                     className="transition-transform hover:scale-110 disabled:opacity-40">
-                    <Heart size={20} fill={jaCurtiu ? '#800020' : 'none'} stroke={jaCurtiu ? '#800020' : '#906070'} />
+                    <Heart size={20} fill={jaCurtiu ? 'var(--primary)' : 'none'} stroke={jaCurtiu ? 'var(--primary)' : 'var(--foreground-muted)'} />
                   </button>
-                  <MessageCircle size={20} style={{ color: '#906070' }} />
+                  <MessageCircle size={20} style={{ color: 'var(--foreground-muted)' }} />
                 </div>
 
                 <div className="flex items-center gap-4 mb-2">
@@ -291,7 +328,7 @@ export function InstagramTab({
                   return (
                     <div className="flex items-center gap-2 mb-2">
                       <CharAvatar p={primeiro ?? { id: '', nome: '?', foto_url: null }} size={18} />
-                      <p className="text-[11px]" style={{ color: '#2E0510' }}>
+                      <p className="text-[11px]" style={{ color: 'var(--foreground)' }}>
                         Curtido por <span className="font-semibold">{primeiro?.nome ?? '?'}</span>
                         {totalOutras > 0 && <> e <span className="font-semibold">{totalOutras.toLocaleString('pt-BR')} {totalOutras === 1 ? 'outra pessoa' : 'outras pessoas'}</span></>}
                       </p>
@@ -303,36 +340,36 @@ export function InstagramTab({
                   <div className="mb-2">
                     <textarea value={editCaption} onChange={e => setEditCaption(e.target.value)} rows={3} autoFocus
                       className="w-full text-xs outline-none resize-none rounded-lg px-2 py-2"
-                      style={{ background: 'rgba(255,255,255,0.70)', border: '0.5px solid rgba(128,0,32,0.20)', color: '#2E0510' }} />
+                      style={{ background: 'rgba(255,255,255,0.70)', border: '0.5px solid var(--p-20)', color: 'var(--foreground)' }} />
                     <div className="flex gap-2 mt-1">
-                      <button onClick={() => saveCaption(selected.id)} className="flex items-center gap-1 text-[11px] px-2.5 py-1 rounded-lg" style={{ background: '#800020', color: '#FAF0F2' }}><Check size={11} /> Salvar</button>
-                      <button onClick={() => setEditingCaption(false)} className="text-[11px] px-2.5 py-1 rounded-lg" style={{ background: 'rgba(128,0,32,0.07)', color: '#906070' }}>Cancelar</button>
+                      <button onClick={() => saveCaption(selected.id)} className="flex items-center gap-1 text-[11px] px-2.5 py-1 rounded-lg" style={{ background: 'var(--btn-primary)', color: 'var(--primary-foreground)' }}><Check size={11} /> Salvar</button>
+                      <button onClick={() => setEditingCaption(false)} className="text-[11px] px-2.5 py-1 rounded-lg" style={{ background: 'var(--p-07)', color: 'var(--foreground-muted)' }}>Cancelar</button>
                     </div>
                   </div>
                 ) : selected.conteudo ? (
-                  <p className="text-xs leading-relaxed mb-1" style={{ color: '#2E0510' }}>
+                  <p className="text-xs leading-relaxed mb-1" style={{ color: 'var(--foreground)' }}>
                     <span className="font-semibold">{personagem.nome} </span>{selected.conteudo}
                   </p>
                 ) : null}
-                <p className="text-[10px]" style={{ color: '#B09098' }}>{dataLabel}</p>
-                {saveError && <p className="text-[10px] mt-1 px-2 py-1 rounded" style={{ background: 'rgba(192,0,0,0.08)', color: '#c0392b' }}>{saveError}</p>}
+                <p className="text-[10px]" style={{ color: 'var(--muted-light)' }}>{dataLabel}</p>
+                {saveError && <p className="text-[10px] mt-1 px-2 py-1 rounded" style={{ background: 'rgba(192,0,0,0.08)', color: 'var(--destructive)' }}>{saveError}</p>}
               </div>
 
-              <div className="flex-1 overflow-y-auto px-4 py-2" style={{ borderTop: '0.5px solid rgba(128,0,32,0.08)' }}>
+              <div className="flex-1 overflow-y-auto px-4 py-2" style={{ borderTop: '0.5px solid var(--p-08)' }}>
                 {postComentarios.length === 0
-                  ? <p className="text-[10px] text-center py-2" style={{ color: '#B09098' }}>Sem comentários ainda</p>
+                  ? <p className="text-[10px] text-center py-2" style={{ color: 'var(--muted-light)' }}>Sem comentários ainda</p>
                   : postComentarios.map(c => {
                     const autor = c.personagens as PersonagemBasic | null
                     return (
                       <div key={c.id} className="flex items-start gap-2 py-1.5 group">
                         {autor && <CharAvatar p={autor} size={22} />}
                         <div className="flex-1 min-w-0">
-                          <span className="text-[11px] font-semibold" style={{ color: '#2E0510' }}>{autor?.nome ?? '?'} </span>
-                          <span className="text-[11px]" style={{ color: '#2E0510' }}>{c.conteudo}</span>
+                          <span className="text-[11px] font-semibold" style={{ color: 'var(--foreground)' }}>{autor?.nome ?? '?'} </span>
+                          <span className="text-[11px]" style={{ color: 'var(--foreground)' }}>{c.conteudo}</span>
                         </div>
                         <button onClick={() => deletarComentario(c.id)}
                           className="opacity-60 md:opacity-0 md:group-hover:opacity-100 flex-shrink-0 transition-opacity p-0.5 hover:opacity-60"
-                          style={{ color: '#B09098' }}><Trash2 size={11} /></button>
+                          style={{ color: 'var(--muted-light)' }}><Trash2 size={11} /></button>
                       </div>
                     )
                   })
@@ -340,19 +377,19 @@ export function InstagramTab({
               </div>
 
               {actingAs ? (
-                <div className="flex items-center gap-2 px-4 py-3 flex-shrink-0" style={{ borderTop: '0.5px solid rgba(128,0,32,0.08)' }}>
+                <div className="flex items-center gap-2 px-4 py-3 flex-shrink-0" style={{ borderTop: '0.5px solid var(--p-08)' }}>
                   <CharAvatar p={actingAs} size={26} />
                   <input value={novoComentario} onChange={e => setNovoComentario(e.target.value)}
                     onKeyDown={e => { if (e.key === 'Enter') enviarComentario(selected.id) }}
                     placeholder={`Comentar como ${actingAs.nome}...`}
-                    className="flex-1 text-xs outline-none bg-transparent" style={{ color: '#2E0510' }} />
+                    className="flex-1 text-xs outline-none bg-transparent" style={{ color: 'var(--foreground)' }} />
                   <button onClick={() => enviarComentario(selected.id)} disabled={enviandoComentario || !novoComentario.trim()}
-                    className="disabled:opacity-30 transition-opacity hover:opacity-70" style={{ color: '#800020' }}>
+                    className="disabled:opacity-30 transition-opacity hover:opacity-70" style={{ color: 'var(--primary)' }}>
                     <Send size={15} />
                   </button>
                 </div>
               ) : (
-                <p className="text-[10px] text-center py-2 flex-shrink-0" style={{ color: '#B09098', borderTop: '0.5px solid rgba(128,0,32,0.08)' }}>
+                <p className="text-[10px] text-center py-2 flex-shrink-0" style={{ color: 'var(--muted-light)', borderTop: '0.5px solid var(--p-08)' }}>
                   Selecione um personagem acima para interagir
                 </p>
               )}

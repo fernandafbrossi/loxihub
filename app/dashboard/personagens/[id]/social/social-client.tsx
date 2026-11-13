@@ -41,6 +41,7 @@ export interface Post {
   id: string
   conteudo: string
   midia_url: string | null
+  midia_urls?: string[] | null
   curtidas: number
   comentarios: number
   retweets: number
