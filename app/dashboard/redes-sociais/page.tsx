@@ -21,10 +21,30 @@ export default async function RedesSociaisPage({ searchParams }: { searchParams:
   if (universo) query.eq('universo_id', universo)
   const { data: personagens } = await query
 
-  const lista = (personagens ?? []) as Personagem[]
+  // As contas Instagram vivem em contas_sociais (a principal é a mais antiga).
+  const { data: contas } = await supabase
+    .from('contas_sociais')
+    .select('personagem_id, username, bio, foto_url, seguidores')
+    .eq('tipo', 'instagram')
+    .order('created_at')
+  const principal = new Map<string, { username: string | null; bio: string | null; foto_url: string | null; seguidores: number | null }>()
+  for (const c of contas ?? []) if (!principal.has(c.personagem_id)) principal.set(c.personagem_id, c)
 
-  const comRedes = lista.filter(p => p.username || p.bio_instagram)
-  const semRedes = lista.filter(p => !p.username && !p.bio_instagram)
+  // Mescla a conta Instagram sobre os dados antigos do personagem.
+  const lista = ((personagens ?? []) as Personagem[]).map(p => {
+    const c = principal.get(p.id)
+    return {
+      ...p,
+      foto_url: c?.foto_url ?? p.foto_url,
+      username: c?.username ?? p.username,
+      bio_instagram: c?.bio ?? p.bio_instagram,
+      seguidores_instagram: c ? c.seguidores : p.seguidores_instagram,
+      temConta: !!c || !!p.username || !!p.bio_instagram,
+    }
+  })
+
+  const comRedes = lista.filter(p => p.temConta)
+  const semRedes = lista.filter(p => !p.temConta)
 
   return (
     <div className="p-7 max-w-2xl">

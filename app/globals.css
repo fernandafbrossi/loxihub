@@ -97,11 +97,3 @@ h1, h2, h3 {
 ::-webkit-scrollbar-thumb:hover {
   background: rgba(128, 0, 32, 0.32);
 }
-
-/* Mobile: o cabeçalho fixo cobria o topo da página após navegar (o Next rola o
-   primeiro elemento até o topo da tela). A margem faz ele parar abaixo do cabeçalho. */
-@media (max-width: 767px) {
-  main > * {
-    scroll-margin-top: 4.5rem;
-  }
-}

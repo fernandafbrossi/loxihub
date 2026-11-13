@@ -163,15 +163,15 @@ export function SocialClient({
   }
 
   return (
-    <div className="min-h-full flex justify-center relative px-4 py-4" style={{ background: 'var(--primary-foreground)' }}>
+    <div className="min-h-full flex justify-center relative px-4 pt-[68px] pb-4 md:pt-4" style={{ background: 'var(--primary-foreground)' }}>
       {/* ── Botões flutuantes nas extremidades ── */}
       <Link href={`/dashboard/personagens/${personagemId}`}
-        className="absolute left-6 top-6 flex items-center gap-1.5 text-xs hover:opacity-70 transition-opacity z-10"
+        className="absolute left-6 top-[76px] md:top-6 flex items-center gap-1.5 text-xs hover:opacity-70 transition-opacity z-10"
         style={{ color: 'var(--foreground-muted)' }}>
         <ArrowLeft size={12} /> Perfil
       </Link>
       <Link href={`/dashboard/personagens/${personagemId}/social/editar`}
-        className="absolute right-6 top-6 hover:opacity-70 transition-opacity z-10"
+        className="absolute right-6 top-[76px] md:top-6 hover:opacity-70 transition-opacity z-10"
         style={{ color: 'var(--foreground-muted)' }}>
         <Settings size={17} />
       </Link>
