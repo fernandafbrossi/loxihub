@@ -41,25 +41,24 @@ interface Props {
 
 const LIMITE_LEGENDA = 125
 
-function EditableNum({ value, icon, label, onSave }: { value: number; icon: React.ReactNode; label: string; onSave: (n: number) => void }) {
-  const [editing, setEditing] = useState(false)
-  const [draft, setDraft] = useState(String(value))
-  function commit() { onSave(parseInt(draft) || 0); setEditing(false) }
+// Número ao lado do ícone (como no Instagram). Tocar nele permite ajustar o total.
+function Contador({ valor, onSalvar, rotulo }: { valor: number; onSalvar: (total: number) => void; rotulo: string }) {
+  const [editando, setEditando] = useState(false)
+  const [rascunho, setRascunho] = useState(String(valor))
+  function confirmar() { onSalvar(Math.max(0, parseInt(rascunho) || 0)); setEditando(false) }
+  if (editando) {
+    return (
+      <input type="number" min={0} value={rascunho} onChange={e => setRascunho(e.target.value)} aria-label={rotulo}
+        onBlur={confirmar} onKeyDown={e => { if (e.key === 'Enter') confirmar(); if (e.key === 'Escape') setEditando(false) }}
+        autoFocus className="w-16 h-8 text-sm text-center outline-none rounded-md"
+        style={{ background: 'var(--p-07)', border: '0.5px solid var(--p-20)', color: 'var(--foreground)' }} />
+    )
+  }
   return (
-    <div className="flex items-center gap-1.5">
-      {icon}
-      {editing ? (
-        <input type="number" min={0} value={draft} onChange={e => setDraft(e.target.value)}
-          onBlur={commit} onKeyDown={e => { if (e.key === 'Enter') commit(); if (e.key === 'Escape') setEditing(false) }}
-          autoFocus className="w-14 text-xs text-center outline-none rounded px-1 py-0.5"
-          style={{ background: 'var(--p-07)', border: '0.5px solid var(--p-20)', color: 'var(--foreground)' }} />
-      ) : (
-        <button onClick={() => { setDraft(String(value)); setEditing(true) }} className="text-xs font-medium hover:underline py-1" style={{ color: 'var(--foreground)' }}>
-          {value.toLocaleString('pt-BR')}
-        </button>
-      )}
-      <span className="text-xs" style={{ color: 'var(--muted-light)' }}>{label}</span>
-    </div>
+    <button onClick={() => { setRascunho(String(valor)); setEditando(true) }} aria-label={`${rotulo}: ${valor}. Tocar para ajustar`}
+      className="h-10 pr-2 text-sm font-semibold tabular-nums" style={{ color: 'var(--foreground)' }}>
+      {valor.toLocaleString('pt-BR')}
+    </button>
   )
 }
 
@@ -99,6 +98,7 @@ export function PostCard(props: Props) {
   const midias = getMidias(post)
   const jaCurtiu = actingAs ? curtidas.some(c => c.personagem_id === actingAs.id) : false
   const totalComentarios = comentarios.length + eng.comentarios
+  const totalCurtidas = curtidas.length + eng.curtidas
   const dataIso = post.data_post || post.created_at
   const duasColunas = layout === 'duas-colunas'
 
@@ -232,10 +232,18 @@ export function PostCard(props: Props) {
         className="w-10 h-10 flex items-center justify-center transition-transform active:scale-90 disabled:opacity-40">
         <Heart size={24} fill={jaCurtiu ? 'var(--primary)' : 'none'} stroke={jaCurtiu ? 'var(--primary)' : 'var(--foreground)'} />
       </button>
+      <span className="-ml-2.5 mr-1.5">
+        <Contador valor={totalCurtidas} rotulo="Curtidas"
+          onSalvar={t => onEngagement(post.id, 'curtidas', Math.max(0, t - curtidas.length))} />
+      </span>
       <button onClick={() => { setComentariosAbertos(true); inputRef.current?.focus() }} aria-label="Comentar"
         className="w-10 h-10 flex items-center justify-center transition-opacity hover:opacity-60">
         <MessageCircle size={24} style={{ color: 'var(--foreground)' }} />
       </button>
+      <span className="-ml-2.5 mr-1.5">
+        <Contador valor={totalComentarios} rotulo="Comentários"
+          onSalvar={t => onEngagement(post.id, 'comentarios', Math.max(0, t - comentarios.length))} />
+      </span>
       <button onClick={compartilhar} aria-label="Compartilhar"
         className="w-10 h-10 flex items-center justify-center transition-opacity hover:opacity-60">
         <Send size={22} style={{ color: 'var(--foreground)' }} />
@@ -248,18 +256,15 @@ export function PostCard(props: Props) {
   )
 
   const curtidoPor = (() => {
-    if (curtidas.length === 0 && eng.curtidas === 0) return null
+    if (curtidas.length === 0) return null
     const primeiro = todosPersonagens.find(x => x.id === curtidas[0]?.personagem_id)
     const outras = Math.max(0, curtidas.length - 1) + eng.curtidas
-    if (curtidas.length === 0) {
-      return <p className="text-xs font-semibold" style={{ color: 'var(--foreground)' }}>{eng.curtidas.toLocaleString('pt-BR')} curtidas</p>
-    }
     return (
       <div className="flex items-center gap-2">
         <CharAvatar p={primeiro ?? { id: '', nome: '?', foto_url: null }} size={18} />
         <p className="text-xs" style={{ color: 'var(--foreground)' }}>
           Curtido por <span className="font-semibold">{primeiro?.nome ?? '?'}</span>
-          {outras > 0 && <> e <span className="font-semibold">{outras.toLocaleString('pt-BR')} {outras === 1 ? 'outra pessoa' : 'outras pessoas'}</span></>}
+          {outras > 0 && <> e <span className="font-semibold">{outras === 1 ? 'outra pessoa' : 'outras pessoas'}</span></>}
         </p>
       </div>
     )
@@ -346,18 +351,10 @@ export function PostCard(props: Props) {
     </p>
   )
 
-  const numeros = (
-    <div className="flex items-center gap-4 mb-1 opacity-80">
-      <EditableNum value={eng.curtidas} icon={<Heart size={12} style={{ color: '#C09098' }} />} label="curtidas" onSave={v => onEngagement(post.id, 'curtidas', v)} />
-      <EditableNum value={eng.comentarios} icon={<MessageCircle size={12} style={{ color: '#C09098' }} />} label="comentários" onSave={v => onEngagement(post.id, 'comentarios', v)} />
-    </div>
-  )
-
   const rodape = (
     <div className="px-4 pt-2 pb-2.5 flex-shrink-0 flex flex-col gap-1.5">
       {botoes}
       {curtidoPor}
-      {numeros}
       {!duasColunas && legenda}
       {!duasColunas && totalComentarios > 0 && !comentariosAbertos && (
         <button onClick={() => setComentariosAbertos(true)} className="text-xs text-left" style={pequeno}>
