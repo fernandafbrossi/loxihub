@@ -308,6 +308,36 @@ export function PostsList({ items, userId, personagens, threadId }: PostsListPro
 
   const deletedIds = useRef(new Set<string>())
 
+  // Ao arrastar um card de cena, rola a lista sozinha quando o mouse chega perto do topo ou do fim
+  useEffect(() => {
+    if (!movendoId) return
+    const scroller = bottomRef.current?.parentElement
+    if (!scroller) return
+    let y: number | null = null
+    let raf = 0
+    const onOver = (e: DragEvent) => { y = e.clientY }
+    const parar = () => { y = null }
+    const tick = () => {
+      if (y !== null) {
+        const r = scroller.getBoundingClientRect()
+        const zona = 110
+        if (y < r.top + zona) scroller.scrollTop -= Math.min(28, (r.top + zona - y) / 3 + 4)
+        else if (y > r.bottom - zona) scroller.scrollTop += Math.min(28, (y - (r.bottom - zona)) / 3 + 4)
+      }
+      raf = requestAnimationFrame(tick)
+    }
+    raf = requestAnimationFrame(tick)
+    document.addEventListener('dragover', onOver)
+    document.addEventListener('drop', parar)
+    document.addEventListener('dragend', parar)
+    return () => {
+      cancelAnimationFrame(raf)
+      document.removeEventListener('dragover', onOver)
+      document.removeEventListener('drop', parar)
+      document.removeEventListener('dragend', parar)
+    }
+  }, [movendoId])
+
   // Sync com o servidor quando router.refresh() atualiza os props.
   // Faz merge (em vez de substituir) para não perder um post que chegou por
   // realtime enquanto o refresh ainda carregava dados mais antigos.

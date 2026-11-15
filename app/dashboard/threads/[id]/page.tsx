@@ -154,7 +154,7 @@ export default async function ThreadPage({ params }: { params: Promise<{ id: str
             )}
           </div>
           <div className="flex items-center gap-2 flex-shrink-0">
-            <ThreadHistory contextos={(contextos ?? []) as any} />
+            <ThreadHistory contextos={(contextos ?? []) as any} eventos={(eventosUniverso ?? []).map(e => ({ ...e, universo_id: thread.universo_id ?? undefined }))} threadId={id} />
             <Link
               href={`/dashboard/threads/${id}/editar`}
               className="flex items-center gap-1.5 text-[11px] px-3 py-1.5 rounded-lg transition-opacity hover:opacity-70"

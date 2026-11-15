@@ -50,6 +50,7 @@ export function CenaForm({ threadId, personagens, lugares, universoId, eventos =
   const [uploading, setUploading] = useState<Record<string, boolean>>({})
   const [linkMode, setLinkMode] = useState<Record<string, boolean>>({})
   const [linkInputs, setLinkInputs] = useState<Record<string, string>>({})
+  const [escolhidos, setEscolhidos] = useState<string[]>([])
   const [eventoId, setEventoId] = useState('')
   const [novoEvento, setNovoEvento] = useState('')
   const [saving, setSaving] = useState(false)
@@ -135,6 +136,7 @@ export function CenaForm({ threadId, personagens, lugares, universoId, eventos =
     setDataCena('')
     setEventoId('')
     setNovoEvento('')
+    setEscolhidos([])
     setClima(null)
     setRoupas({})
     setLinkMode({})
@@ -367,13 +369,31 @@ export function CenaForm({ threadId, personagens, lugares, universoId, eventos =
       {/* Roupas dos personagens */}
       {personagens.length > 0 && (
         <div className="mb-3">
-          <p className="text-[10px] uppercase tracking-widest mb-2.5" style={{ color: 'var(--muted-light)' }}>
+          <p className="text-[10px] uppercase tracking-widest mb-2" style={{ color: 'var(--muted-light)' }}>
             Roupas dos personagens
           </p>
+          <select
+            value=""
+            onChange={e => { const v = e.target.value; if (v) setEscolhidos(l => [...l, v]) }}
+            aria-label="Adicionar roupa de um personagem"
+            className="w-full text-sm outline-none rounded-lg px-3 py-2 mb-3"
+            style={{ background: 'rgba(255,255,255,0.85)', border: '0.5px solid var(--p-15)', color: 'var(--muted-light)' }}
+          >
+            <option value="">+ Adicionar roupa de um personagem…</option>
+            {personagens.filter(p => !escolhidos.includes(p.id)).map(p => (
+              <option key={p.id} value={p.id}>{p.nome}</option>
+            ))}
+          </select>
           <div className="flex flex-wrap gap-4">
-            {personagens.map(p => (
+            {personagens.filter(p => escolhidos.includes(p.id)).map(p => (
               <div key={p.id} className="flex flex-col items-center gap-1.5">
-                <span className="text-[10px] font-medium" style={{ color: 'var(--foreground-muted)' }}>{p.nome}</span>
+                <span className="flex items-center gap-1 text-[10px] font-medium" style={{ color: 'var(--foreground-muted)' }}>
+                  {p.nome}
+                  <button type="button" aria-label={`Tirar ${p.nome}`} className="hover:opacity-70"
+                    onClick={() => { removeRoupa(p.id); setEscolhidos(l => l.filter(x => x !== p.id)) }}>
+                    <X size={9} />
+                  </button>
+                </span>
 
                 {roupas[p.id] ? (
                   <div className="relative">

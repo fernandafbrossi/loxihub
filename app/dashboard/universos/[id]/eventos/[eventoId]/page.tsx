@@ -28,10 +28,17 @@ export default async function EventoPage({ params }: { params: Promise<{ id: str
   // Cenas em que o evento aparece (vazio se o SQL das cenas ainda não rodou)
   const { data: cenasRaw } = await supabase
     .from('contextos_cena')
-    .select('id, localizacao, thread_id, threads(id, titulo)')
+    .select('id, localizacao, thread_id, threads(id, titulo), roupas_contexto(id, roupa_url, personagens(id, nome))')
     .eq('evento_id', eventoId)
     .order('created_at', { ascending: true })
-  const cenas = (cenasRaw ?? []) as unknown as { id: string; localizacao: string | null; thread_id: string; threads: { id: string; titulo: string } | null }[]
+  const cenas = (cenasRaw ?? []) as unknown as {
+    id: string
+    localizacao: string | null
+    thread_id: string
+    threads: { id: string; titulo: string } | null
+    roupas_contexto: { id: string; roupa_url: string; personagens: { id: string; nome: string } | null }[]
+  }[]
+  const looks = cenas.flatMap(c => c.roupas_contexto ?? [])
 
   const thread = evento.threads as { id: string; titulo: string; status: string } | null
   const data = new Date(evento.data_jogo + 'T12:00:00')
@@ -101,6 +108,21 @@ export default async function EventoPage({ params }: { params: Promise<{ id: str
                   <span className="font-medium">{c.threads?.titulo ?? 'Thread'}</span>
                   {c.localizacao && <span style={{ color: 'var(--foreground-muted)' }}>· {c.localizacao}</span>}
                 </Link>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {/* Looks */}
+        {looks.length > 0 && (
+          <section className="p-5" style={glassCard}>
+            <p className={label} style={{ color: 'var(--foreground-muted)' }}>Looks</p>
+            <div className="flex flex-wrap gap-3">
+              {looks.map(l => (
+                <a key={l.id} href={l.roupa_url} target="_blank" rel="noreferrer" className="flex flex-col items-center gap-1">
+                  <img src={l.roupa_url} alt="" className="w-20 h-28 object-cover rounded-xl" style={{ border: '0.5px solid var(--p-12)' }} />
+                  {l.personagens?.nome && <span className="text-[10px]" style={{ color: 'var(--foreground-muted)' }}>{l.personagens.nome}</span>}
+                </a>
               ))}
             </div>
           </section>
