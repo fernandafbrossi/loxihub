@@ -82,6 +82,7 @@ interface Props {
   comentariosIniciais: Comentario[]
   comentarioCurtidasIniciais?: ComentarioCurtida[]
   postInicialId?: string | null
+  padraoActingId?: string | null
 }
 
 export function SocialClient({
@@ -89,9 +90,12 @@ export function SocialClient({
   todosPersonagens, curtidasIniciais, comentariosIniciais,
   comentarioCurtidasIniciais = [], postInicialId = null,
   postsMarcados = [], contasMarcadas = [], destaques = [],
+  padraoActingId = null,
 }: Props) {
   const [avisoPerfil, setAvisoPerfil] = useState<string | null>(null)
-  const [actingAs, setActingAs] = useState<PersonagemBasic | null>(todosPersonagens[0] ?? null)
+  const [actingAs, setActingAs] = useState<PersonagemBasic | null>(
+    () => todosPersonagens.find(p => p.id === padraoActingId) ?? todosPersonagens[0] ?? null
+  )
   const [pickerOpen, setPickerOpen] = useState(false)
   const pickerRef = useRef<HTMLDivElement>(null)
 

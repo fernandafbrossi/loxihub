@@ -19,12 +19,21 @@ export default async function SocialPage({ params, searchParams }: {
     { data: contas },
     { data: posts },
   ] = await Promise.all([
-    supabase.from('personagens').select('id, nome, foto_url, capa_url, username').eq('id', id).single(),
+    supabase.from('personagens').select('id, nome, foto_url, capa_url, username, universo_id').eq('id', id).single(),
     supabase.from('contas_sociais').select('*').eq('personagem_id', id).order('created_at'),
     supabase.from('posts_sociais').select('*').eq('personagem_id', id).order('data_post', { ascending: false }),
   ])
 
   if (!personagem) notFound()
+
+  // "Agindo como" começa no personagem principal de quem está logada neste universo
+  // (definido em Configurações; ex.: Effie para uma, Damien para a outra).
+  const { data: { user: usuariaLogada } } = await supabase.auth.getUser()
+  const { data: principal } = usuariaLogada && personagem.universo_id
+    ? await supabase.from('perfil_personagem_principal').select('personagem_id')
+        .eq('perfil_id', usuariaLogada.id).eq('universo_id', personagem.universo_id).maybeSingle()
+    : { data: null }
+  const padraoActingId: string | null = principal?.personagem_id ?? null
 
   const contasList = (contas ?? []) as Conta[]
   const postsList = (posts ?? []) as Post[]
@@ -111,6 +120,7 @@ export default async function SocialPage({ params, searchParams }: {
         destaques={destaques ?? []}
         userId={user?.id ?? ''}
         todosPersonagens={personagensSociais}
+        padraoActingId={padraoActingId}
         curtidasIniciais={curtidas ?? []}
         comentariosIniciais={comentariosSociais}
         comentarioCurtidasIniciais={comentarioCurtidas ?? []}
