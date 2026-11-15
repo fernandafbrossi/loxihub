@@ -33,8 +33,9 @@ export default async function ThreadPage({ params }: { params: Promise<{ id: str
     { data: posts },
     { data: { user } },
     { data: personagens },
-    { data: contextos },
+    { data: contextosRaw, error: contextosErro },
     { data: lugares },
+    { data: eventosUniverso },
   ] = await Promise.all([
     threadsQuery,
     supabase
@@ -48,13 +49,25 @@ export default async function ThreadPage({ params }: { params: Promise<{ id: str
       : supabase.from('personagens').select('id, nome, foto_url, tipo').order('nome', { ascending: true }),
     supabase
       .from('contextos_cena')
-      .select('id, localizacao, lugar_id, data_cena, temperatura_min, temperatura_max, temperatura_media, criado_por, created_at, roupas_contexto(id, personagem_id, roupa_url, personagens(id, nome)), lugares(id, nome)')
+      .select('id, localizacao, lugar_id, data_cena, temperatura_min, temperatura_max, temperatura_media, criado_por, created_at, evento_id, eventos(id, universo_id, titulo, data_jogo, descricao, clima, imagens), roupas_contexto(id, personagem_id, roupa_url, personagens(id, nome)), lugares(id, nome)')
       .eq('thread_id', id)
       .order('created_at', { ascending: true }),
     thread.universo_id
       ? supabase.from('lugares').select('id, nome, lat, lng').eq('universo_id', thread.universo_id).order('nome', { ascending: true })
       : supabase.from('lugares').select('id, nome, lat, lng').order('nome', { ascending: true }),
+    thread.universo_id
+      ? supabase.from('eventos').select('id, titulo, data_jogo, thread_id').eq('universo_id', thread.universo_id).order('data_jogo', { ascending: false })
+      : Promise.resolve({ data: [] as { id: string; titulo: string; data_jogo: string; thread_id: string | null }[] }),
   ])
+
+  // Se o SQL de eventos ainda não rodou, volta para a consulta antiga para não quebrar a thread
+  const contextos = contextosErro
+    ? (await supabase
+        .from('contextos_cena')
+        .select('id, localizacao, lugar_id, data_cena, temperatura_min, temperatura_max, temperatura_media, criado_por, created_at, roupas_contexto(id, personagem_id, roupa_url, personagens(id, nome)), lugares(id, nome)')
+        .eq('thread_id', id)
+        .order('created_at', { ascending: true })).data
+    : contextosRaw
 
   const timeline = [
     ...(posts ?? []).map(p => ({ type: 'post' as const, data: p })),
@@ -173,6 +186,8 @@ export default async function ThreadPage({ params }: { params: Promise<{ id: str
               personagemPrincipal=""
               personagens={personagens ?? []}
               lugares={lugares ?? []}
+              universoId={thread.universo_id ?? null}
+              eventos={eventosUniverso ?? []}
             />
           </div>
         )}

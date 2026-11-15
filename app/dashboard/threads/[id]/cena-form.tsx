@@ -22,10 +22,14 @@ interface CenaFormProps {
   threadId: string
   personagens: Personagem[]
   lugares: Lugar[]
+  universoId?: string | null
+  eventos?: { id: string; titulo: string; data_jogo: string; thread_id: string | null }[]
   /** Controle externo (usado pelo botão ＋ do composer no mobile). */
   open?: boolean
   onOpenChange?: (open: boolean) => void
 }
+
+const NOVO_EVENTO = '__novo__'
 
 interface ClimaData {
   min: number
@@ -33,7 +37,7 @@ interface ClimaData {
   media: number
 }
 
-export function CenaForm({ threadId, personagens, lugares, open: openProp, onOpenChange }: CenaFormProps) {
+export function CenaForm({ threadId, personagens, lugares, universoId, eventos = [], open: openProp, onOpenChange }: CenaFormProps) {
   const [openInternal, setOpenInternal] = useState(false)
   const open = openProp ?? openInternal
   const setOpen = (v: boolean) => { setOpenInternal(v); onOpenChange?.(v) }
@@ -46,6 +50,8 @@ export function CenaForm({ threadId, personagens, lugares, open: openProp, onOpe
   const [uploading, setUploading] = useState<Record<string, boolean>>({})
   const [linkMode, setLinkMode] = useState<Record<string, boolean>>({})
   const [linkInputs, setLinkInputs] = useState<Record<string, string>>({})
+  const [eventoId, setEventoId] = useState('')
+  const [novoEvento, setNovoEvento] = useState('')
   const [saving, setSaving] = useState(false)
   const router = useRouter()
 
@@ -78,6 +84,12 @@ export function CenaForm({ threadId, personagens, lugares, open: openProp, onOpe
     setClima(null)
     const l = lugares.find(x => x.id === newLugarId)
     if (l && dataCena) fetchClima(l, dataCena)
+  }
+
+  function handleEventoChange(valor: string) {
+    setEventoId(valor)
+    const ev = eventos.find(e => e.id === valor)
+    if (ev) handleDataChange(ev.data_jogo)
   }
 
   function handleDataChange(newData: string) {
@@ -121,6 +133,8 @@ export function CenaForm({ threadId, personagens, lugares, open: openProp, onOpe
     setLugarId('')
     setLocalizacaoManual('')
     setDataCena('')
+    setEventoId('')
+    setNovoEvento('')
     setClima(null)
     setRoupas({})
     setLinkMode({})
@@ -128,13 +142,30 @@ export function CenaForm({ threadId, personagens, lugares, open: openProp, onOpe
   }
 
   const localizacaoFinal = lugarSelecionado ? lugarSelecionado.nome : localizacaoManual.trim()
-  const temConteudo = localizacaoFinal || Object.keys(roupas).length > 0
+  const criandoEvento = eventoId === NOVO_EVENTO
+  const eventoPronto = !criandoEvento || (novoEvento.trim() && dataCena)
+  const temConteudo = (localizacaoFinal || Object.keys(roupas).length > 0 || eventoId) && eventoPronto
 
   async function handleSubmit() {
     if (!temConteudo) return
     setSaving(true)
     const supabase = createClient()
     const { data: { user } } = await supabase.auth.getUser()
+
+    // Evento: usa o escolhido ou cria um novo já com a data da cena
+    let eventoFinal: string | null = null
+    if (criandoEvento && universoId) {
+      const { data: criado } = await supabase
+        .from('eventos')
+        .insert({ universo_id: universoId, thread_id: threadId, titulo: novoEvento.trim(), data_jogo: dataCena, criado_por: user?.id })
+        .select('id')
+        .single()
+      eventoFinal = criado?.id ?? null
+    } else if (eventoId && !criandoEvento) {
+      eventoFinal = eventoId
+      const ev = eventos.find(e => e.id === eventoId)
+      if (ev && !ev.thread_id) await supabase.from('eventos').update({ thread_id: threadId }).eq('id', eventoId)
+    }
 
     const { data: contexto } = await supabase
       .from('contextos_cena')
@@ -143,6 +174,7 @@ export function CenaForm({ threadId, personagens, lugares, open: openProp, onOpe
         localizacao: localizacaoFinal || null,
         lugar_id: lugarId || null,
         data_cena: dataCena || null,
+        evento_id: eventoFinal,
         temperatura_min: clima?.min ?? null,
         temperatura_max: clima?.max ?? null,
         temperatura_media: clima?.media ?? null,
@@ -205,6 +237,43 @@ export function CenaForm({ threadId, personagens, lugares, open: openProp, onOpe
           <X size={13} style={{ color: 'var(--foreground-muted)' }} className="hover:opacity-70 transition-opacity" />
         </button>
       </div>
+
+      {/* Evento */}
+      {universoId && (
+        <div className="mb-3">
+          <select
+            value={eventoId}
+            onChange={e => handleEventoChange(e.target.value)}
+            aria-label="Evento"
+            className="w-full text-sm outline-none rounded-lg px-3 py-2"
+            style={{ background: 'rgba(255,255,255,0.85)', border: '0.5px solid var(--p-15)', color: eventoId ? 'var(--foreground)' : 'var(--muted-light)' }}
+          >
+            <option value="">Evento (opcional)...</option>
+            {eventos.map(e => (
+              <option key={e.id} value={e.id}>
+                {e.titulo} · {new Date(e.data_jogo + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}
+              </option>
+            ))}
+            <option value={NOVO_EVENTO}>+ Criar evento…</option>
+          </select>
+          {criandoEvento && (
+            <div className="mt-2">
+              <input
+                type="text"
+                autoFocus
+                value={novoEvento}
+                onChange={e => setNovoEvento(e.target.value)}
+                placeholder="Nome do evento (ex: Jantar de estreia)"
+                className="w-full text-sm outline-none rounded-lg px-3 py-2"
+                style={{ background: 'rgba(255,255,255,0.85)', border: '0.5px solid var(--p-15)', color: 'var(--foreground)' }}
+              />
+              <p className="text-[10px] mt-1" style={{ color: 'var(--muted-light)' }}>
+                Usa a data da cena abaixo. Depois você completa a descrição na página do evento.
+              </p>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Seletor de lugar */}
       {lugares.length > 0 ? (

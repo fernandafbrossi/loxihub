@@ -22,6 +22,8 @@ interface PostFormProps {
   personagemPrincipal: string
   personagens: Personagem[]
   lugares: { id: string; nome: string; lat: number | null; lng: number | null }[]
+  universoId?: string | null
+  eventos?: { id: string; titulo: string; data_jogo: string; thread_id: string | null }[]
 }
 
 function Avatar({ p, size = 5 }: { p: { nome: string; foto_url: string | null }; size?: number }) {
@@ -66,7 +68,7 @@ function GroupLabel({ label }: { label: string }) {
 
 const DRAFT_KEY = (threadId: string) => `loxihub_draft_${threadId}`
 
-export function PostForm({ threadId, personagemPrincipal, personagens, lugares }: PostFormProps) {
+export function PostForm({ threadId, personagemPrincipal, personagens, lugares, universoId, eventos }: PostFormProps) {
   const [cenaOpen, setCenaOpen] = useState(false)
   const [sheetOpen, setSheetOpen] = useState(false)
   const [focused, setFocused] = useState(false)
@@ -226,6 +228,8 @@ export function PostForm({ threadId, personagemPrincipal, personagens, lugares }
       threadId={threadId}
       personagens={personagens}
       lugares={lugares}
+      universoId={universoId ?? null}
+      eventos={eventos ?? []}
       open={cenaOpen}
       onOpenChange={setCenaOpen}
     />

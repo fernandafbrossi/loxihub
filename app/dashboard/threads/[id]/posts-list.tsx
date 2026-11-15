@@ -1,10 +1,11 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { Fragment, useState, useEffect, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
-import { Pencil, Check, X, MapPin, Trash2, Thermometer, ArrowDown } from 'lucide-react'
+import { Pencil, Check, X, MapPin, Trash2, Thermometer, ArrowDown, ArrowUpDown } from 'lucide-react'
 import { MarkdownText } from '@/components/markdown-text'
+import { EventoChip, type EventoResumo } from './evento-chip'
 
 interface Post {
   id: string
@@ -31,6 +32,8 @@ interface ContextoCena {
   criado_por: string | null
   created_at: string
   roupas_contexto: RoupaContexto[]
+  evento_id?: string | null
+  eventos?: EventoResumo | null
 }
 
 interface Personagem {
@@ -115,17 +118,40 @@ function OutfitImage({ url, nome, size = 'sm', onOpen }: {
   )
 }
 
-function ContextoCard({ contexto, onOpenImage, onDelete }: {
+function DropZone({ onDrop }: { onDrop: () => void }) {
+  const [over, setOver] = useState(false)
+  return (
+    <button
+      type="button"
+      onClick={onDrop}
+      onDragOver={e => { e.preventDefault(); setOver(true) }}
+      onDragLeave={() => setOver(false)}
+      onDrop={e => { e.preventDefault(); setOver(false); onDrop() }}
+      className="w-full py-2 rounded-lg text-[11px] font-medium transition-colors"
+      style={{
+        border: '1px dashed var(--p-30)',
+        background: over ? 'var(--p-12)' : 'var(--p-05)',
+        color: 'var(--primary)',
+      }}
+    >
+      Colocar aqui
+    </button>
+  )
+}
+
+function ContextoCard({ contexto, onOpenImage, onDelete, onMove, moving }: {
   contexto: ContextoCena
   onOpenImage: (url: string) => void
   onDelete: (id: string) => void
+  onMove: (id: string | null) => void
+  moving: boolean
 }) {
   const [deleting, setDeleting] = useState(false)
   const hora = new Date(contexto.created_at).toLocaleString('pt-BR', {
     day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit',
   })
 
-  if (!contexto.localizacao && contexto.roupas_contexto.length === 0) return null
+  if (!contexto.localizacao && contexto.roupas_contexto.length === 0 && !contexto.eventos) return null
 
   async function handleDelete() {
     setDeleting(true)
@@ -133,7 +159,13 @@ function ContextoCard({ contexto, onOpenImage, onDelete }: {
   }
 
   return (
-    <div className="group flex items-center gap-3 my-1">
+    <div
+      className="group flex items-center gap-3 my-1"
+      draggable
+      onDragStart={() => onMove(contexto.id)}
+      onDragEnd={() => onMove(null)}
+      style={{ opacity: moving ? 0.5 : 1 }}
+    >
       <div
         className="flex-1 px-4 py-3 rounded-xl"
         style={{
@@ -143,6 +175,7 @@ function ContextoCard({ contexto, onOpenImage, onDelete }: {
       >
         <div className="flex items-center justify-between gap-4">
           <div className="flex flex-col gap-2">
+            {contexto.eventos && <EventoChip evento={contexto.eventos} onOpenImage={onOpenImage} />}
             {contexto.localizacao && (
               <div className="flex items-center gap-1.5 flex-wrap">
                 <MapPin size={11} style={{ color: 'var(--primary)', flexShrink: 0 }} />
@@ -186,6 +219,13 @@ function ContextoCard({ contexto, onOpenImage, onDelete }: {
 
           <div className="flex flex-col items-end gap-1 self-start flex-shrink-0">
             <span className="text-[10px]" style={{ color: 'var(--muted-light)' }}>{hora}</span>
+            <button
+              onClick={() => onMove(moving ? null : contexto.id)}
+              className="opacity-60 md:opacity-0 md:group-hover:opacity-100 transition-opacity"
+              title="Mover para outro ponto da thread"
+            >
+              <ArrowUpDown size={11} style={{ color: moving ? 'var(--primary)' : 'var(--muted-light)' }} />
+            </button>
             <button
               onClick={handleDelete}
               disabled={deleting}
@@ -236,6 +276,7 @@ export function PostsList({ items, userId, personagens, threadId }: PostsListPro
   const [editConteudo, setEditConteudo] = useState('')
   const [saving, setSaving] = useState(false)
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null)
+  const [movendoId, setMovendoId] = useState<string | null>(null)
   const router = useRouter()
   const bottomRef = useRef<HTMLDivElement>(null)
   const seenIds = useRef(new Set(items.map(i => i.data.id)))
@@ -367,6 +408,33 @@ export function PostsList({ items, userId, personagens, threadId }: PostsListPro
     return () => { channel.unsubscribe() }
   }, [threadId])
 
+  // Reposiciona um card de cena: ajusta created_at para ficar logo depois do item escolhido
+  async function moverCardPara(depoisDeIdx: number) {
+    const id = movendoId
+    if (!id) return
+    const outros = localItems.filter(i => i.data.id !== id)
+    const t = (i: TimelineItem | undefined) => (i ? new Date(i.data.created_at).getTime() : null)
+    let novo: number
+    if (depoisDeIdx < 0) {
+      novo = (t(outros[0]) ?? Date.now()) - 1000
+    } else {
+      const anterior = t(localItems[depoisDeIdx])!
+      const proximo = t(localItems.slice(depoisDeIdx + 1).find(i => i.data.id !== id))
+      novo = proximo == null ? anterior + 1 : anterior + Math.max(1, Math.floor((proximo - anterior) / 2))
+    }
+    const iso = new Date(novo).toISOString()
+    setMovendoId(null)
+    const { data, error } = await createClient().from('contextos_cena').update({ created_at: iso }).eq('id', id).select('id')
+    if (error || !data || data.length === 0) {
+      alert('Não foi possível mover o card. Tente de novo.')
+      return
+    }
+    setLocalItems(prev => prev
+      .map(i => (i.data.id === id ? { ...i, data: { ...i.data, created_at: iso } } : i) as TimelineItem)
+      .sort((a, b) => new Date(a.data.created_at).getTime() - new Date(b.data.created_at).getTime()))
+    router.refresh()
+  }
+
   async function handleDeleteContexto(id: string) {
     const supabase = createClient()
     await supabase.from('contextos_cena').delete().eq('id', id)
@@ -435,7 +503,15 @@ export function PostsList({ items, userId, personagens, threadId }: PostsListPro
         </div>
       ) : (
         <div className="flex flex-col gap-4 md:gap-6">
-          {localItems.map(item => {
+          {movendoId && (
+            <div className="sticky top-0 z-10 flex items-center justify-between gap-3 px-4 py-2 rounded-xl text-xs" style={{ background: 'var(--primary)', color: 'var(--primary-foreground)' }}>
+              <span>Escolha onde colocar o card de cena</span>
+              <button onClick={() => setMovendoId(null)} className="underline underline-offset-2">Cancelar</button>
+            </div>
+          )}
+          {movendoId && localItems[0]?.data.id !== movendoId && <DropZone onDrop={() => moverCardPara(-1)} />}
+          {localItems.map((item, idx) => {
+            const el = (() => {
             if (item.type === 'contexto') {
               return (
                 <ContextoCard
@@ -443,6 +519,8 @@ export function PostsList({ items, userId, personagens, threadId }: PostsListPro
                   contexto={item.data as ContextoCena}
                   onOpenImage={setLightboxUrl}
                   onDelete={handleDeleteContexto}
+                  onMove={setMovendoId}
+                  moving={movendoId === item.data.id}
                 />
               )
             }
@@ -537,6 +615,14 @@ export function PostsList({ items, userId, personagens, threadId }: PostsListPro
                   )}
                 </div>
               </div>
+            )
+            })()
+            const mostrarZona = movendoId && item.data.id !== movendoId && localItems[idx + 1]?.data.id !== movendoId
+            return (
+              <Fragment key={`${item.type}-${item.data.id}`}>
+                {el}
+                {mostrarZona && <DropZone onDrop={() => moverCardPara(idx)} />}
+              </Fragment>
             )
           })}
         </div>

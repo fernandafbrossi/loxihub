@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Clock, X, MapPin, Trash2, Thermometer } from 'lucide-react'
+import { EventoChip, type EventoResumo } from './evento-chip'
 
 interface RoupaContexto {
   id: string
@@ -22,6 +23,7 @@ interface ContextoCena {
   criado_por: string | null
   created_at: string
   roupas_contexto: RoupaContexto[]
+  eventos?: EventoResumo | null
 }
 
 function Lightbox({ url, onClose }: { url: string; onClose: () => void }) {
@@ -36,7 +38,7 @@ function Lightbox({ url, onClose }: { url: string; onClose: () => void }) {
         style={{ background: 'rgba(255,255,255,0.15)' }}
         onClick={onClose}
       >
-        <X size={16} color="#FAF0F2" />
+        <X size={16} color="var(--primary-foreground)" />
       </button>
       <img
         src={url}
@@ -73,7 +75,7 @@ export function ThreadHistory({ contextos: inicial }: { contextos: ContextoCena[
       <button
         onClick={() => setOpen(true)}
         className="flex-shrink-0 flex items-center gap-1.5 text-[11px] px-3 py-1.5 rounded-lg transition-opacity hover:opacity-70"
-        style={{ background: 'rgba(128,0,32,0.07)', color: '#800020' }}
+        style={{ background: 'var(--p-07)', color: 'var(--primary)' }}
       >
         <Clock size={12} /> Histórico
       </button>
@@ -88,7 +90,7 @@ export function ThreadHistory({ contextos: inicial }: { contextos: ContextoCena[
             className="h-full w-80 overflow-y-auto flex flex-col"
             style={{
               background: 'rgba(250,240,242,0.98)',
-              borderLeft: '0.5px solid rgba(128,0,32,0.12)',
+              borderLeft: '0.5px solid var(--p-12)',
               boxShadow: '-8px 0 32px rgba(40,5,15,0.14)',
             }}
             onClick={e => e.stopPropagation()}
@@ -96,16 +98,16 @@ export function ThreadHistory({ contextos: inicial }: { contextos: ContextoCena[
             {/* Cabeçalho do painel */}
             <div
               className="flex items-center justify-between px-5 py-4 flex-shrink-0"
-              style={{ borderBottom: '0.5px solid rgba(128,0,32,0.08)' }}
+              style={{ borderBottom: '0.5px solid var(--p-08)' }}
             >
               <div className="flex items-center gap-2">
-                <Clock size={13} style={{ color: '#800020' }} />
-                <span className="text-xs font-semibold uppercase tracking-widest" style={{ color: '#800020' }}>
+                <Clock size={13} style={{ color: 'var(--primary)' }} />
+                <span className="text-xs font-semibold uppercase tracking-widest" style={{ color: 'var(--primary)' }}>
                   Histórico de Cenas
                 </span>
               </div>
               <button onClick={() => setOpen(false)}>
-                <X size={14} style={{ color: '#906070' }} className="hover:opacity-70 transition-opacity" />
+                <X size={14} style={{ color: 'var(--foreground-muted)' }} className="hover:opacity-70 transition-opacity" />
               </button>
             </div>
 
@@ -119,36 +121,42 @@ export function ThreadHistory({ contextos: inicial }: { contextos: ContextoCena[
                 return (
                   <div key={c.id}>
                     {i > 0 && (
-                      <div className="h-px mb-6" style={{ background: 'rgba(128,0,32,0.08)' }} />
+                      <div className="h-px mb-6" style={{ background: 'var(--p-08)' }} />
                     )}
 
                     <div className="flex items-start justify-between gap-2 mb-2">
-                      <span className="text-[10px]" style={{ color: '#B09098' }}>{hora}</span>
+                      <span className="text-[10px]" style={{ color: 'var(--muted-light)' }}>{hora}</span>
                       <button
                         onClick={() => handleDelete(c.id)}
                         disabled={deleting === c.id}
                         className="flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-lg disabled:opacity-40 hover:opacity-70 transition-opacity"
-                        style={{ background: 'rgba(128,0,32,0.08)', color: '#906070' }}
+                        style={{ background: 'var(--p-08)', color: 'var(--foreground-muted)' }}
                       >
                         <Trash2 size={10} />
                         {deleting === c.id ? '...' : 'Apagar'}
                       </button>
                     </div>
 
+                    {c.eventos && (
+                      <div className="mb-2">
+                        <EventoChip evento={c.eventos} onOpenImage={setLightboxUrl} />
+                      </div>
+                    )}
+
                     {c.localizacao && (
                       <div className="flex items-center gap-1.5 flex-wrap mb-3">
-                        <MapPin size={11} style={{ color: '#800020', flexShrink: 0 }} />
-                        <span className="text-sm font-medium" style={{ color: '#2E0510' }}>{c.localizacao}</span>
+                        <MapPin size={11} style={{ color: 'var(--primary)', flexShrink: 0 }} />
+                        <span className="text-sm font-medium" style={{ color: 'var(--foreground)' }}>{c.localizacao}</span>
                         {c.data_cena && (
-                          <span className="text-xs" style={{ color: '#906070' }}>
+                          <span className="text-xs" style={{ color: 'var(--foreground-muted)' }}>
                             · {new Date(c.data_cena + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' })}
                           </span>
                         )}
                         {c.temperatura_media != null && (
-                          <span className="inline-flex items-center gap-0.5 text-xs" style={{ color: '#906070' }}>
-                            <Thermometer size={11} style={{ color: '#800020' }} />
+                          <span className="inline-flex items-center gap-0.5 text-xs" style={{ color: 'var(--foreground-muted)' }}>
+                            <Thermometer size={11} style={{ color: 'var(--primary)' }} />
                             {c.temperatura_media}°C
-                            <span style={{ color: '#B09098' }}> (mín {c.temperatura_min}° · máx {c.temperatura_max}°)</span>
+                            <span style={{ color: 'var(--muted-light)' }}> (mín {c.temperatura_min}° · máx {c.temperatura_max}°)</span>
                           </span>
                         )}
                       </div>
@@ -163,14 +171,14 @@ export function ThreadHistory({ contextos: inicial }: { contextos: ContextoCena[
                               alt=""
                               className="w-16 h-24 object-cover rounded-xl cursor-pointer hover:opacity-90 transition-opacity"
                               style={{
-                                border: '0.5px solid rgba(128,0,32,0.12)',
+                                border: '0.5px solid var(--p-12)',
                                 boxShadow: '0 2px 8px rgba(40,5,15,0.06)',
                               }}
                               onClick={() => setLightboxUrl(r.roupa_url)}
                               onError={e => { (e.target as HTMLImageElement).style.opacity = '0.3' }}
                             />
                             {r.personagens?.nome && (
-                              <span className="text-[9px]" style={{ color: '#906070' }}>
+                              <span className="text-[9px]" style={{ color: 'var(--foreground-muted)' }}>
                                 {r.personagens.nome}
                               </span>
                             )}
