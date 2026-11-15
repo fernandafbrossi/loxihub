@@ -105,13 +105,16 @@ export default async function ThreadPage({ params }: { params: Promise<{ id: str
         >
           <Hash size={13} style={{ color: 'var(--foreground-muted)', flexShrink: 0 }} />
           <OpenSidebarButton titulo={thread.titulo} />
-          <Link
-            href={`/dashboard/threads/${id}/editar`}
-            className="ml-auto flex-shrink-0 p-1 rounded-lg hover:opacity-70 transition-opacity"
-            style={{ color: 'var(--foreground-muted)' }}
-          >
-            <Pencil size={16} />
-          </Link>
+          <div className="ml-auto flex items-center gap-2 flex-shrink-0">
+            <ThreadHistory contextos={(contextos ?? []) as any} eventos={(eventosUniverso ?? []).map(e => ({ ...e, universo_id: thread.universo_id ?? undefined }))} threadId={id} />
+            <Link
+              href={`/dashboard/threads/${id}/editar`}
+              className="flex-shrink-0 p-1 rounded-lg hover:opacity-70 transition-opacity"
+              style={{ color: 'var(--foreground-muted)' }}
+            >
+              <Pencil size={16} />
+            </Link>
+          </div>
         </div>
 
         {/* Header desktop */}
