@@ -6,7 +6,8 @@ import { MultiImageUpload } from '@/components/multi-image-upload'
 import { PostCarousel } from '@/components/post-carousel'
 import { ConfirmDialog } from '@/components/confirm-dialog'
 import { TextoRico } from '@/components/texto-rico'
-import { getMidias, tempoRelativo } from '@/lib/social-utils'
+import Link from 'next/link'
+import { getMidias, tempoRelativo, slugNome } from '@/lib/social-utils'
 import {
   AccountAvatar, CharAvatar,
   type PersonagemBasic, type Curtida, type Comentario, type ComentarioCurtida, type Conta, type Post,
@@ -59,6 +60,15 @@ function Contador({ valor, onSalvar, rotulo }: { valor: number; onSalvar: (total
       className="h-10 pr-2 text-sm font-semibold tabular-nums" style={{ color: 'var(--foreground)' }}>
       {valor.toLocaleString('pt-BR')}
     </button>
+  )
+}
+
+// @usuario clicável (como no Instagram) que leva ao perfil social do personagem.
+function UserLink({ id, nome, username }: { id?: string; nome: string; username?: string | null }) {
+  const texto = username || slugNome(nome)
+  if (!id) return <span className="font-semibold">{texto}</span>
+  return (
+    <Link href={`/dashboard/personagens/${id}/social`} className="font-semibold hover:underline">{texto}</Link>
   )
 }
 
@@ -263,7 +273,7 @@ export function PostCard(props: Props) {
       <div className="flex items-center gap-2">
         <CharAvatar p={primeiro ?? { id: '', nome: '?', foto_url: null }} size={18} />
         <p className="text-xs" style={{ color: 'var(--foreground)' }}>
-          Curtido por <span className="font-semibold">{primeiro?.nome ?? '?'}</span>
+          Curtido por {primeiro ? <UserLink id={primeiro.id} nome={primeiro.nome} username={primeiro.username} /> : <span className="font-semibold">?</span>}
           {outras > 0 && <> e <span className="font-semibold">{outras === 1 ? 'outra pessoa' : 'outras pessoas'}</span></>}
         </p>
       </div>
@@ -290,7 +300,7 @@ export function PostCard(props: Props) {
     </div>
   ) : post.conteudo ? (
     <p className="text-[13px] leading-relaxed whitespace-pre-wrap break-words" style={{ color: 'var(--foreground)' }}>
-      <span className="font-semibold">{personagem.nome} </span>
+      <UserLink id={personagem.id} nome={personagem.nome} username={conta?.username} />{' '}
       {legendaAberta || post.conteudo.length <= LIMITE_LEGENDA
         ? <TextoRico texto={post.conteudo} personagens={todosPersonagens} />
         : <>
@@ -310,7 +320,7 @@ export function PostCard(props: Props) {
         {autor && <CharAvatar p={autor} size={28} />}
         <div className="flex-1 min-w-0">
           <p className="text-[13px] leading-snug break-words" style={{ color: 'var(--foreground)' }}>
-            <span className="font-semibold">{autor?.nome ?? '?'} </span>
+            {autor ? <UserLink id={autor.id} nome={autor.nome} username={autorCompleto?.username ?? autor.username} /> : <span className="font-semibold">?</span>}{' '}
             <TextoRico texto={c.conteudo} personagens={todosPersonagens} />
           </p>
           <div className="flex items-center gap-3 mt-1 text-[11px]" style={pequeno}>
